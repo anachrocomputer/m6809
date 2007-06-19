@@ -28,7 +28,8 @@ void *mmalloc(size_t n)
 
   p = (void *)malloc(n);
   if (!p) {
-    fprintf(stderr, "Not enough memory to allocate %d bytes\n", n);
+    /* Note cast to make code portable to 64-bit systems */
+    fprintf(stderr, "Not enough memory to allocate %ld bytes\n", (long)n);
     abort();
   }
   return p;
