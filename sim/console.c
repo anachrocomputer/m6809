@@ -15,12 +15,18 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
+#define _BSD_SOURCE  /* Needed for prototype to 'cfmakeraw' */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <termios.h>
+
+#define STDIN (0)
+#define STDOUT (1)
 
 #include "config.h"
 #include "emu6809.h"
@@ -49,9 +55,12 @@ void console_init(void)
 
 int m6809_system(void) 
 {
+  static struct termios orig_tty;
+  static int cbrk = 0;
   static char input[256];
   char *p = input;
   tt_u8 c;
+  struct termios new_tty;
 
   switch (ra) {
   case 0 :
@@ -76,6 +85,35 @@ int m6809_system(void)
       } else
 	set_memb(rx, 0);
     }
+    set_memb(rs + 1, ra);
+    rti();
+    return 0;
+  case 3:
+    tcgetattr (STDIN, &orig_tty);
+    tcgetattr (STDIN, &new_tty);
+    cfmakeraw (&new_tty);
+    tcsetattr (STDIN, TCSAFLUSH, &new_tty);
+    cbrk = 1;
+    rti();
+    return 0;
+  case 4:
+    if (cbrk != 0) {
+      tcsetattr (STDIN, TCSAFLUSH, &orig_tty);
+      cbrk = 0;
+    }
+    rti();
+    return 0;
+  case 5:
+    input[0] = rb;
+    write (STDOUT, input, 1);
+    rti();
+    return 0;
+  case 6:
+    if (read (STDIN, input, 1) == -1) {
+      rti();
+      return 1;
+    }
+    ra = input[0];
     set_memb(rs + 1, ra);
     rti();
     return 0;
