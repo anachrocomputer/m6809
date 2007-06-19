@@ -200,7 +200,9 @@ void console_command()
 {
   static char input[80], copy[80];
   char *strptr;
-  tt_u16 memadr, start, end;
+  tt_u16 memadr = 0;
+  tt_u16 start = 0;
+  tt_u16 end = 0;
   long n;
   int i, r;
   int regon = 0;
