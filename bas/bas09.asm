@@ -441,7 +441,7 @@ hexerr          lda     #'?'
                 clra
                 bra     hexdone
                 
-; HEX2IN --- read a two hex digits from the keyboard
+; HEX2IN --- read two hex digits from the keyboard
 ; Entry: no parameters
 ; Exit:  8-bit value in A, flags set
 hex2in          jsr     hex1in
@@ -454,7 +454,7 @@ hex2in          jsr     hex1in
                 ora     ,s+
                 rts
 
-; HEX4IN --- read a two hex digits from the keyboard
+; HEX4IN --- read two hex digits from the keyboard
 ; Entry: no parameters
 ; Exit:  16-bit value in D
 hex4in          jsr     hex2in
@@ -482,7 +482,7 @@ space           pshs    a
                 
 ; TOUPPER --- map an ASCII character to upper case
 ; Entry: ASCII character in A
-; Exit uppercase ASCII character in A, other registers unchanged
+; Exit: uppercase ASCII character in A, other registers unchanged
 toupper         cmpa    #'a'
                 blo     uprrtn
                 cmpa    #'z'
@@ -492,7 +492,7 @@ uprrtn          rts
 
 ; TOLOWER --- map an ASCII character to lower case
 ; Entry: ASCII character in A
-; Exit lowercase ASCII character in A, other registers unchanged
+; Exit: lowercase ASCII character in A, other registers unchanged
 tolower         cmpa    #'A'
                 blo     lowrtn
                 cmpa    #'Z'
