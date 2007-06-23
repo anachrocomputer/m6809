@@ -12,6 +12,9 @@
 ; 25/10/2004 BJ  Hex monitor '@' command
 ; 27/10/2004 BJ  Added screen save/restore and random number generator
 ; 27/10/2004 BJ  Added Matrix display hack
+; 15/03/2006 BJ  Changed reset message to reduce size of text in EPROM
+; 15/03/2006 BJ  Altered VDU code to use jump table
+; 23/03/2006 BJ  Added VDU test pattern
 
 eos             equ     $00
 nul             equ     $00
@@ -29,6 +32,15 @@ ctrl_o          equ     $0f
 sp              equ     $20
 del             equ     $7f
 crsrch          equ     $06               ; Character to represent cursor
+blkch           equ     $a1               ; Block character, all pixels lit
+topch           equ     $87               ; Top row of pixels lit
+botch           equ     $80               ; Bottom row of pixels lit
+lftch           equ     $88               ; Leftmost column of pixels lit
+rghch           equ     $8f               ; Rightmost column of pixels lit
+trch            equ     207               ; Top right corner
+tlch            equ     210               ; Top left corner
+brch            equ     208               ; Bottom right corner
+blch            equ     209               ; Bottom left corner
 
 kbmodrow        equ     $01               ; Keyboard modifier keys row
 kbrow1          equ     $02               ; First row of main keyboard
@@ -66,6 +78,7 @@ vdubuf          rmb     16*48             ; VDU save/restore buffer
 pad             equ     $ff               ; Padding unused EPROM space
 
 ; Hardware adresses
+ramtop          equ     $0fff             ; Last byte of 4K 2114 RAM
 vram            equ     $d000             ; UK101 video RAM
 botrow          equ     $d3c0             ; Address of bottom row of VDU
 vramsz          equ     $0400             ; 1k byte of video RAM
@@ -96,31 +109,14 @@ vdurtn          stb     crsrpos           ; Save updated cursor position
 ctrlch          cmpa    #nul              ; Ignore NULs
                 beq     vdurtn
                 cmpa    #ctrl_g
-                bmi     notctrl
-                bne     notg
-                bsr     vctrl_g
-notg            cmpa    #ctrl_h
-                bne     noth
-                bsr     vctrl_h
-noth            cmpa    #ctrl_i
-                bne     noti
-                bsr     vctrl_i
-noti            cmpa    #ctrl_j
-                bne     notj   
-                bsr     vctrl_j
-notj            cmpa    #ctrl_k 
-                bne     notk
-                bsr     vctrl_k
-notk            cmpa    #ctrl_l
-                bne     notl
-                bsr     vctrl_l
-notl            cmpa    #ctrl_m
-                bne     notm
-                bsr     vctrl_m
-notm            cmpa    #ctrl_n
-                bne     notn
-                bsr     vctrl_n
-notn            bra     vdurtn
+                bmi     notctrl           ; Wasn't a valid control character after all
+                suba    #ctrl_g           ; Subtract offset
+                asla                      ; Multiply by two
+                pshs    y                 ; Need to use Y so save it
+                ldy     #vctrltab         ; Load pointer to subroutine table
+                jsr     [a,y]             ; Call cursor motion subroutine
+                puls    y                 ; Restore Y
+                bra     vdurtn            ; Back to main VDU routine
 
 vctrltab        fdb     vctrl_g
                 fdb     vctrl_h
@@ -190,16 +186,16 @@ vctrl_m         clrb                      ; CTRL_M: carriage return
 ; VDUSAVE --- save video display into memory buffer
 ; Entry: buffer address in X
 vdusave         pshs    a,b,x,y,u
-                ldy     #vram+lm
-                lda     #16               ; vdurows
-sav_r           ldb     #24               ; vducols / 2
-sav_c           ldu     ,y++              ; Load from video RAM
-                stu     ,x++              ; Store into buffer
-                decb
-                bne     sav_c
-                leay    16,y              ; Skip 16 bytes in VRAM
-                deca
-                bne     sav_r
+                ldy     #vram+lm          ; 4
+                lda     #16               ; 2 vdurows
+sav_r           ldb     #24               ; 2 vducols / 2
+sav_c           ldu     ,y++              ; 5+3 Load from video RAM
+                stu     ,x++              ; 5+3 Store into buffer
+                decb                      ; 2
+                bne     sav_c             ; 3  
+                leay    16,y              ; 4+1 Skip 16 bytes in VRAM
+                deca                      ; 2
+                bne     sav_r             ; 3   
                 puls    a,b,x,y,u,pc
                 
 ; VDURESTORE --- restore video display from buffer in memory
@@ -219,22 +215,30 @@ rest_c          ldu     ,x++              ; Load from buffer
                 
 ; KEYW
 ; Write a bit-pattern to the keyboard matrix from A
-keyw            coma                      ; Invert bits because the
-                sta     keymatrix         ; key matrix is all active-low
-                coma         
-                rts
+;keyw            coma                      ; Invert bits because the
+;                sta     keymatrix         ; key matrix is all active-low
+;                coma         
+;                rts
                 
 ; KEYRB
 ; Read the keyboard matrix, result in B
-keyrb           ldb     keymatrix         ; Read the keys...
+;keyrb           ldb     keymatrix         ; Read the keys...
+;                comb                      ; and invert bits
+;                rts
+                
+; KEYWRB
+; Write a bit-pattern to the keyboard matrix from A, then read into B
+keywrb          coma                      ; Invert bits because the
+                sta     keymatrix         ; key matrix is all active-low
+                coma         
+                ldb     keymatrix         ; Read the keys...
                 comb                      ; and invert bits
                 rts
                 
 ; KEYRST
 ; Reset and test the keyboard
 keyrst          lda     #$ff              ; Test all 8 keyboard rows at once
-                bsr     keyw
-                bsr     keyrb
+                bsr     keywrb
                 andb    #$fe              ; Ignore Caps-Lock
                 beq     keyrst1
                 ldx     #kbmsg            ; Print failure message
@@ -246,8 +250,7 @@ keyrst1         rts
 pollkb          pshs    b,x
                 ldx     #1                ; Scancodes are 1-based
                 lda     #kbrow1           ; Start scanning at row 1
-pollrow         jsr     keyw
-                jsr     keyrb
+pollrow         jsr     keywrb
                 bne     pollok
                 leax    8,x               ; Next row, next eight scan-codes
                 asla                      ; Next bit to the left
@@ -336,7 +339,7 @@ t1ou1           lda     acias             ; Read ACIA status
 ; Read a single keystroke from the keyboard by polling
 getkey          pshs    b,x               ; Save B and X
 kbp             jsr     pollkb            ; Poll keyboard matrix
-                cmpa    #0                ; Any key(s) pressed?
+                tsta                      ; Any key(s) pressed?
                 beq     keysup
                 dec     keydly
                 beq     keydone
@@ -354,15 +357,30 @@ keydone         ldb     #longdly          ; Load long (first repeat) delay
 keynew          stb     keydly
                 sta     prevscan          ; Remember scan code for next time
                 lda     #kbmodrow         ; Deal with SHIFT, CTRL, CAPS
-                jsr     keyw
-                jsr     keyrb
+                jsr     keywrb            ; Read modifier bits into B
                 lda     prevscan
                 ldx     #scantab
                 lda     a,x               ; Pick up ASCII code
-                andb    #$06              ; Mask off SHIFTs
+                bpl     noshift           ; Top bit is 'shiftable' flag
+                anda    #$7f              ; Mask off top bit to get ASCII
+                bitb    #$06              ; Test bits for SHIFTs
                 beq     noshift
-                eora    #16
-noshift         puls    b,x,pc            ; Restore B, X and return
+                eora    #16               ; Flip bit 4 to shift like a teletype
+noshift         cmpa    #'@'              ; CTRL only works on '@' to '_'
+                blo     noctrl
+                cmpa    #'_'
+                bhi     noctrl
+                bitb    #$40              ; Test bit for CTRL
+                beq     noctrl
+                anda    #$1f              ; Mask off bits for CTRL
+noctrl          cmpa    #'A'              ; CAPS-LOCK only works on 'A' to 'Z'
+                blo     nocaps
+                cmpa    #'Z'
+                bhi     nocaps
+                bitb    #$01              ; Test bit for CAPS-LOCK
+                bne     nocaps
+                adda    #$20              ; Add 32 for lower-case
+nocaps          puls    b,x,pc            ; Restore B, X and return
 
 ; GETCHAR
 ; Get a character from input device
@@ -383,7 +401,7 @@ getchar         pshs    b,x               ; Save B and X
                 puls    b,x,pc            ; Restore B, X and return
                 
 ; DLY100U
-; Delay for 100us
+; Delay for 100us when running with 8MHz clock
 dly100u         pshs    a                 ; 6
                 lda     #35               ; 2
 dlyloop         deca                      ; 2 * 35
@@ -403,50 +421,43 @@ dly1ms          bsr     dly100u
                 bsr     dly100u
                 bsr     dly100u
                 rts
+                
+ndly1ms         pshs    x                 ; 7
+                ldx     #246              ; 3
+ndlyloop        leax    -1,x              ; 5 * 246
+                bne     ndlyloop          ; 3 * 246
+                puls    x,pc              ; 9
+
+dly1ms2         pshs    a                 ; 6
+                lda     #220              ; 2
+dlyloop2        deca                      ; 2 * 220
+                nop                       ; 2 * 220
+                nop                       ; 2 * 220
+                bne     dlyloop2          ; 3 * 220
+                puls    a,pc              ; 8
 
 ; Various message strings
-rstmsg
-                fcb     204
-                fcb     131,131,131,131,131,131,131,131
-                fcb     131,131,131,131,131,131,131,131
-                fcb     131,131,131,131,131,131,131,131
-                fcb     131,131,131,131,131,131,131,131
-                fcb     131,131,131,131,131,131,131,131
-                fcb     131,131,131,131,131
-                fcb     205
-                fcb     cr,lf
-                fcb     140
-                fcc     '            '
+rstmsg          fcb     lf,ctrl_i
                 fcc     'UK109 (6809 CPU) V0.1'
-                fcc     '            '
-                fcb     139
-                fcb     cr,lf
-                fcb     140
-                fcc     '              '
-                fcc     'Copyright (c) 2004'
-                fcc     '             '
-                fcb     139
-                fcb     cr,lf
-                fcb     203
-                fcb     132,132,132,132,132,132,132,132
-                fcb     132,132,132,132,132,132,132,132
-                fcb     132,132,132,132,132,132,132,132
-                fcb     132,132,132,132,132,132,132,132
-                fcb     132,132,132,132,132,132,132,132
-                fcb     132,132,132,132,132
-                fcb     206
+                fcb     cr,lf,ctrl_i
+                fcc     'Copyright (c) 2004-2006'
                 fcb     cr,lf
                 fcb     eos
 
-romokmsg        fcc     'ROM checksum OK'
+romokmsg        fcb     ctrl_i
+                fcc     'ROM checksum OK'
                 fcb     eos
-romerrmsg       fcc     'ROM checksum error,'
+romerrmsg       fcb     ctrl_i
+                fcc     'ROM checksum error,'
                 fcb     eos
-memokmsg        fcc     'Memory OK'
+memokmsg        fcb     ctrl_i
+                fcc     'Memory OK'
                 fcb     eos
-memfail1        fcc     "RAM test fail1 at $"
+memfail1        fcb     ctrl_i
+                fcc     "RAM test fail1 at $"
                 fcb     eos
-memfail2        fcc     "RAM test fail2 at $"
+memfail2        fcb     ctrl_i
+                fcc     "RAM test fail2 at $"
                 fcb     eos
 expmsg          fcc     " expected $"
                 fcb     eos
@@ -459,30 +470,27 @@ readmsg         fcc     ", read $"
 ;adrerrmsg       fcc     'Memory Addressing FAIL'
 ;                fcb     cr,lf,eos
                 
-kbmsg           fcc     'Keyboard FAIL'
+kbmsg           fcb     ctrl_i
+                fcc     'Keyboard FAIL'
                 fcb     cr,lf,eos
 
 hexdig          fcc     '0123456789ABCDEF'
 
-scantab         fcc     '_'               ; Skip zeroth index
-                fcc     'QAZ /;P_'        ; 1-8
-                fcc     'XCVBNM,_'        ; 9-16
-                fcc     'SDFGHJK_'        ; 17-24
-                fcc     'WERTYUI_'        ; 25-32
-                fcc     '.LO^'            ; 33-40
-                fcb     cr
-                fcc     '___'
-                fcc     '890:-'           ; 41-48
-                fcb     del
-                fcc     '__'
-                fcc     '1234567_'        ; 49-56
+N               equ     $80                      
+NKY             equ     0
 
-helpmsg         fcc     'Monitor commands...'
+scantab         fcb     NKY               ; Skip zeroth index
+                fcb     'Q',  'A',  'Z',  sp,   '/'+N,';'+N,'P'+N,NKY ; 1-8
+                fcb     'X',  'C',  'V',  'B',  'N'+N,'M'+N,','+N,NKY ; 9-16
+                fcb     'S',  'D',  'F',  'G',  'H',  'J',  'K'+N,NKY ; 17-24
+                fcb     'W',  'E',  'R',  'T',  'Y',  'U',  'I',  NKY ; 25-32
+                fcb     '.'+N,'L'+N,'O'+N,'^',  cr,   NKY,  NKY,  NKY ; 33-40
+                fcb     '8'+N,'9'+N,'0',  ':'+N,'-'+N,del,  NKY,  NKY ; 41-48
+                fcb     '1'+N,'2'+N,'3'+N,'4'+N,'5'+N,'6'+N,'7'+N,NKY ; 49-56
+
+helpmsg         fcc     '6809 Monitor'
                 fcb     eos
                 
-decbuf          fcc     '42'
-                fcb     eos
-
 cmdtab          fdb     atcmd, acmd, bcmd
                 fdb     ccmd, dcmd, ecmd
                 fdb     fcmd, gcmd, hcmd 
@@ -499,7 +507,7 @@ cmderr          lda     #'?'
                 jsr     crlf
 monitor         lda     #'>'              ; Monitor command-level prompt
                 jsr     vduchar
-                jsr     getchar
+                jsr     getchar           ; Read command letter from user
                 jsr     vduchar
 ;                cmpa    #42               ; SIM
 ;                beq     exit              ; SIM
@@ -507,9 +515,8 @@ monitor         lda     #'>'              ; Monitor command-level prompt
                 cmpa    #'@'
                 blo     cmderr
                 cmpa    #'Z'
-                bls     cmdok
-                bra     cmderr
-cmdok           suba    #'@'
+                bhi     cmderr
+                suba    #'@'
                 asla
                 ldx     #cmdtab
                 jsr     [a,x]
@@ -520,7 +527,6 @@ cmdok           suba    #'@'
 ;                swi                       ; SIM
 ;                lda     #0                ; SIM Terminate
 ;                swi                       ; SIM
-;here            jmp     here
 
 ; Monitor command routines
 ; @ - open memory for editing
@@ -550,7 +556,7 @@ cmdok           suba    #'@'
 ; X - edit X reg
 ; Y - edit Y reg
 ; Z - spare
-atcmd           jsr     hex4in
+atcmd           jsr     hex4in            ; '@' command - open memory for editing
                 tfr     d,x
 atcmd5          lda     #'='
                 jsr     vduchar
@@ -629,14 +635,7 @@ iloop           lda     ,x
                 jsr     hex2ou
                 jsr     space
                 rts
-jcmd            ldx     #decbuf
-                jsr     prtmsg
-                lda     #'='
-                jsr     vduchar
-                ldx     #decbuf
-                jsr     DECCON
-                jsr     hex4ou
-                rts
+jcmd            rts
 kcmd            rts
 lcmd            rts
 mcmd            rts
@@ -675,17 +674,45 @@ scmd            rts
 ;                jsr     hex2ou            ; Checksum
 ;                jsr     crlf
 ;                rts
-tcmd            rts
-ucmd            rts
-vcmd            rts
+tcmd            clrb
+thang           jsr     ndly1ms           ; 8
+                incb                      ; 2
+                stb     keymatrix         ; 5
+                bra     thang             ; 3 Hang here
+
+ucmd            clrb
+uhang           jsr     dly1ms2           ; 8
+                incb                      ; 2
+                stb     keymatrix         ; 5
+                bra     uhang             ; 3 Hang here
+
+vcmd            ldx     #vdubuf           ; Save VDU RAM
+                jsr     vdusave
+                lda     #ctrl_l           ; Clear the screen
+                jsr     vduchar
+                clra                      ; Start with ASCII zero
+                clrb
+                ldx     #vram+lm          ; Start in top LH corner of VDU
+vloop           sta     b,x               ; Store byte in VDU RAM
+                incb                      ; Write into every other byte
+                incb
+                cmpb    #32               ; Start a new row
+                blo     v1
+                clrb
+                leax    vramstride,x      ; Move X pointer down one row
+v1              inca                      ; Next ASCII character
+                bne     vloop             ; Loop for all 256 ASCII codes
+                jsr     getkey            ; Wait for a key press
+                ldx     #vdubuf           ; Restore VDU RAM
+                jmp     vdurestore        ; Put video RAM back again
 wcmd            rts
 xcmd            rts
 ycmd            jsr     rnd16             ; Get a 16-bit random number
                 jsr     hex4ou
                 rts
-zcmd            ldx     #vdubuf
+zcmd            ldx     #vdubuf           ; Matrix display hack (216 bytes)
                 jsr     vdusave           ; Save video RAM
-                lda     #ctrl_l
+                lda     #ctrl_l           ; Clear screen
                 jsr     vduchar
                 lda     #47               ; Loop counter for cols 0-47
                 ldx     #matdly
@@ -721,7 +748,7 @@ noanim          deca
                 jsr     dly1ms            ; Delay for 1ms
                 jsr     kbhit             ; Test for keyboard
                 bcc     matrix
-matexit         ldx     #vdubuf
+                ldx     #vdubuf
                 jmp     vdurestore        ; Put video RAM back again
                 
 ; Entry: A=column number
@@ -750,17 +777,23 @@ ani3            stb     a,x               ; Place at top of column
 ;               inc     a,x               ; Increment char at top
                 rts
                 
+; Table of non-alphabetic symbols for the Matrix display hack
+matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
+                fcb     35,36,37,38,39,40,41,42,43,44,45,46,47,48,58,59
+                fcb     60,61,62,64,90,92,94,95,123,124,125,126,127,179,180,181
+                fcb     182,211,212,213,214,241,242,243,244,245,246,247,248,249,250,251
+
 ; KBHIT --- return with carry set if a key is pressed
 kbhit           pshs    a,b
                 lda     #$ff
-                jsr     keyw
-                jsr     keyrb
+                jsr     keywrb
                 andcc   #$fe              ; Clear carry bit
                 andb    #$fe              ; Ignore caps-lock
                 beq     nokbhit
                 orcc    #$01              ; Set carry bit
 nokbhit         puls    a,b,pc
 
+; RND16 --- generate 16-bit pseudo-random number
 rnd16           lda     rng3              ; Pick up 3rd byte of 24 bit SR
                 anda    #$01              ; Mask bottom bit
                 tfr     a,b               ; Put into B
@@ -776,7 +809,7 @@ r2              lsrb                      ; Bottom bit of B into carry
                 rol     rng1              ; Now do a 24-bit left shift
                 rol     rng2              ; taking the carry bit in
                 rol     rng3
-                lda     rng1
+                lda     rng1              ; Load 16 random bits
                 ldb     rng2
                 rts
                 
@@ -837,6 +870,16 @@ space           pshs    a
                 jsr     vduchar
                 puls    a,pc
                 
+; TOUPPER --- map an ASCII character to upper case
+; Entry: ASCII character in A
+; Exit uppercase ASCII character in A, other registers unchanged
+toupper         cmpa    #'a'
+                blo     uprrtn
+                cmpa    #'z'
+                bhi     uprrtn
+                suba    #'a'-'A'
+uprrtn          rts
+
 ;; PUTLIN_NS
 ;; Entry: X->string, U contains return address
 ;; Exit:  X modified, other registers unchanged
@@ -860,9 +903,72 @@ space           pshs    a
 ;                sta     acias
 ;                puls    a,pc
 
+;===============================================================
+;= DECCON   ASCII decimal to unsigned 16-bit conversion.
+;===============================================================
+;JOB        To convert an unsigned ASCII decimal string held in
+;           memory to a 16-bit binary value in registers, or
+;           return overflow information.
+;ACTION     On 16-bit overflow: [ Set overflow flag. Exit. ]
+;           Clear 16-bit partial result accumulator.
+;           Get 1st character and address next.
+;           WHILE character is ASCII digit;
+;           [ Strip ASCII digits hi-nibble.
+;             Partial result = partial result * 10 + digit.
+;             Get character and adress next. ]
+;---------------------------------------------------------------
+;CPU        6809
+;HARDWARE   Memory containing ASCII decimal number.
+;SOFTWARE   None.
+;---------------------------------------------------------------
+;INPUT      X addresses the 1st (high order) byte of the ASCII
+;           decimal number string. The string must terminate
+;           with any non-digit character.
+;OUTPUT     Y is changed.
+;           C = 1: overflow has occurred. X and D unknown.
+;           C = 0: conversion successfully completed.
+;             D contains the binary equivalent.
+;             X addresses the byte following the terminator.
+;ERRORS     None.
+;REG USE    CC D X Y
+;STACK USE  2
+;RAM USE    None.
+;LENGTH     34
+;CYCLES     38+73 8 number of digits.
+;           (Non-overflow and excluding leading zeros).
+;---------------------------------------------------------------
+;CLASS 2     -discreet      *interruptable      *promable
+;-*****      *reentrant     *relocatable        *robust
+;===============================================================
+;
+DECCON          clra                      ; Zeroise binary result
+                clrb
+;
+nxtdgt          tfr     d,y               ; Move partial result to Y
+                clra                      ; Clear acc hi-byte, get next ASCII
+                ldb     ,x+               ; digit in lo-byte, indexing next.
+                subb    #$30              ; Strip off ASCII digits hi-nybble
+                cmpb    #$0a              ; and test for valid decimal digit.
+                exg     d,y               ; Digit to Y, part result to D.
+                bcc     exit2             ; Exit conversion done if not digit.
+                bita    #$e0              ; Else test if * 10 by shifting will
+                bne     exit2             ; overflow and exit if so, carry set.
+                lslb                      ; Shift partial result up one bit
+                rola                      ; for partial result * 2, and add
+                leay    d,y               ; to new digit in Y.
+                lslb                      ; Second shift gives
+                rola                      ; partial result * 4
+                lslb                      ; Third shift gives 
+                rola                      ; partial result * 8 in D.
+                pshs    y                 ; Put part result * 2 + new digit on
+                addd    ,s++              ; stack and add in, clearing stack.
+                bcc     nxtdgt            ; Repeat if no overflow from add.
+;
+exit2           rts                       ; Exit okay (C = 0), overflow (C = 1)
+
                 org     uk101reset
 reset           orcc    #%01010000        ; Disable interrupts
-                lds     #$0fff            ; Set up initial stack pointer
+                lds     #ramtop           ; Set up initial stack pointer
 ;                lda     #3                ; SIM Into CBREAK mode
 ;                swi                       ; SIM
                 clra
@@ -888,12 +994,49 @@ clrscn          sta     ,x+
                 leay    -1,y
                 bne     clrscn
                 
+; Draw box around screen for video setup
+                ldx     #vram+lm          ; X points to top row
+                ldy     #vram+lm          ; Y points to column one
+                ldb     #16
+boxloop         lda     #botch            ; Bottom row
+                sta     15*vramstride,x
+                lda     #topch            ; Top row
+                sta     ,x+
+                lda     #botch            ; Bottom row
+                sta     15*vramstride,x
+                lda     #topch            ; Top row
+                sta     ,x+
+                lda     #botch            ; Bottom row
+                sta     15*vramstride,x
+                lda     #topch            ; Top row
+                sta     ,x+
+                lda     #lftch            ; Col one
+                sta     ,y                ; Write into column one
+                lda     #rghch            ; Col 48
+                sta     47,y              ; Write into column 48
+                leay    vramstride,y      ; Move Y down to next row
+                decb
+                bne     boxloop
+                
+                lda     #tlch             ; Place the four corner characters separately
+                sta     vram+lm
+                lda     #trch
+                sta     vram+lm+47
+                lda     #blch
+                sta     botrow+lm
+                lda     #brch
+                sta     botrow+lm+47
+
 ; Initialise cursor position
                 clra
                 ldx     #vram+lm
                 sta     crsrpos
                 stx     crsrrow
                 
+; Display sign-on message
+                ldx     #rstmsg
+                jsr     prtmsg
+
 ; ROM checksum
                 ldy     #monrom           ; Y->start of monitor ROM
                 ldd     #0                ; Start with D=0
@@ -967,7 +1110,7 @@ rtloop          lda     #0                ; Test with $00
                 bne     rtfail8
 
                 leay    1,y               ; Add one to Y
-                cmpy    #$0fff            ; Check for top of RAM
+                cmpy    #ramtop           ; Check for top of RAM
                 blt     rtloop
                 ldx     #memokmsg         ; RAM test passed
                 jsr     prtmsg
@@ -1121,11 +1264,7 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
                 lda     #rngseed3
                 sta     rng3
 
-; Display sign-on message
-                ldx     #rstmsg
-                jsr     prtmsg
-
-                jsr     keyrst
+                jsr     keyrst            ; Reset the keyboard
                 
                 jmp     monitor
 ;                lda     #$42
@@ -1142,91 +1281,6 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
 ;                jsr     vduchar
 ;                bra     loop
                 
-;                clrb
-;hang            jsr     dly100u           ; 8 + 191 = 199
-;                incb                      ; 2
-;                stb     keymatrix         ; 5
-;                bra     hang              ; 3 Hang here
-
-;===============================================================
-;= DECCON   ASCII decimal to unsigned 16-bit conversion.
-;===============================================================
-;JOB        To convert an unsigned ASCII decimal string held in
-;           memory to a 16-bit binary value in registers, or
-;           return overflow information.
-;ACTION     On 16-bit overflow: [ Set overflow flag. Exit. ]
-;           Clear 16-bit partial result accumulator.
-;           Get 1st character and address next.
-;           WHILE character is ASCII digit;
-;           [ Strip ASCII digits hi-nibble.
-;             Partial result = partial result * 10 + digit.
-;             Get character and adress next. ]
-;---------------------------------------------------------------
-;CPU        6809
-;HARDWARE   Memory containing ASCII decimal number.
-;SOFTWARE   None.
-;---------------------------------------------------------------
-;INPUT      X addresses the 1st (high order) byte of the ASCII
-;           decimal number string. The string must terminate
-;           with any non-digit character.
-;OUTPUT     Y is changed.
-;           C = 1: overflow has occurred. X and D unknown.
-;           C = 0: conversion successfully completed.
-;             D contains the binary equivalent.
-;             X addresses the byte following the terminator.
-;ERRORS     None.
-;REG USE    CC D X Y
-;STACK USE  2
-;RAM USE    None.
-;LENGTH     34
-;CYCLES     38+73 8 number of digits.
-;           (Non-overflow and excluding leading zeros).
-;---------------------------------------------------------------
-;CLASS 2     -discreet      *interruptable      *promable
-;-*****      *reentrant     *relocatable        *robust
-;===============================================================
-;
-DECCON          clra                      ; Zeroise binary result
-                clrb
-;
-nxtdgt          tfr     d,y               ; Move partial result to Y
-                clra                      ; Clear acc hi-byte, get next ASCII
-                ldb     ,x+               ; digit in lo-byte, indexing next.
-                subb    #$30              ; Strip off ASCII digits hi-nybble
-                cmpb    #$0a              ; and test for valid decimal digit.
-                exg     d,y               ; Digit to Y, part result to D.
-                bcc     exit2             ; Exit conversion done if not digit.
-                bita    #$e0              ; Else test if * 10 by shifting will
-                bne     exit2             ; overflow and exit if so, carry set.
-                lslb                      ; Shift partial result up one bit
-                rola                      ; for partial result * 2, and add
-                leay    d,y               ; to new digit in Y.
-                lslb                      ; Second shift gives
-                rola                      ; partial result * 4
-                lslb                      ; Third shift gives 
-                rola                      ; partial result * 8 in D.
-                pshs    y                 ; Put part result * 2 + new digit on
-                addd    ,s++              ; stack and add in, clearing stack.
-                bcc     nxtdgt            ; Repeat if no overflow from add.
-;
-exit2           rts                       ; Exit okay (C = 0), overflow (C = 1)
-
-; TOUPPER --- map an ASCII character to upper case
-; Entry: ASCII character in A
-; Exit uppercase ASCII character in A, other registers unchanged
-toupper         cmpa    #'a'
-                blo     uprrtn
-                cmpa    #'z'
-                bhi     uprrtn
-                suba    #'a'-'A'
-uprrtn          rts
-
-; Table of non-alphabetic symbols for the Matrix display hack
-matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
-                fcb     35,36,37,38,39,40,41,42,43,44,45,46,47,48,58,59
-                fcb     60,61,62,64,90,92,94,95,123,124,125,126,127,179,180,181
-                fcb     182,211,212,213,214,241,242,243,244,245,246,247,248,249,250,251
-
 swi3jmp         jmp     [swi3vec]         ; Table of indirect jumps to ISRs
 swi2jmp         jmp     [swi2vec]
 swijmp          jmp     [swivec]
