@@ -37,20 +37,19 @@ COMPILERS: 	Microport Sys V/AT, ATT Yacc, Turbo C V1.5, Bison (CUG disk 285)
 #include "frasmdat.h"
 
 FILE * intermedf = (FILE *) NULL;
-char interfn[] = 
+static char interfn[] = 
 #ifdef DOSTMP
  "frtXXXXXX";
 #else
  "/usr/tmp/frtXXXXXX";
 #endif
-char *hexfn, *loutfn;
 int errorcnt = 0, warncnt = 0;
-int listflag = FALSE, hexflag = FALSE, hexvalid = FALSE;
-static int debugmode = FALSE;
-static FILE *symbf;
-static char *symbfn;
-static int  symbflag = FALSE;
+int listflag = FALSE, hexflag = FALSE;
+static int Debugmode = FALSE;
 char hexcva[17] = "0123456789ABCDEF";
+
+static printsymbols(FILE *fp);
+static filesymbols(FILE *fp);
 
 #ifdef NOGETOPT
 #include "getopt.h"
@@ -73,6 +72,11 @@ main(argc, argv)
 	extern char *optarg;
 	extern int optind;
 	int grv;
+	char *hexfn, *loutfn;
+	int hexvalid = FALSE;
+	char *symbfn;
+	FILE *symbf;
+	int  symbflag = FALSE;
 
 	grv = cpumatch(argv[0]);
 
@@ -92,7 +96,7 @@ main(argc, argv)
 			break;
 
 		case 'd':
-			debugmode = TRUE;
+			Debugmode = TRUE;
 			break;
 
 		case 's':
@@ -182,7 +186,7 @@ main(argc, argv)
 
 	buildsymbolindex();
 	if(listflag)
-		printsymbols();
+		printsymbols(loutf);
 
 	if(symbflag)
 	{
@@ -198,7 +202,7 @@ main(argc, argv)
 		}
 		else
 		{
-			filesymbols();
+			filesymbols(symbf);
 			fclose(symbf);
 		}
 	}
@@ -259,7 +263,7 @@ main(argc, argv)
 	}
 	
 	fclose(intermedf);
-	if( ! debugmode)
+	if( ! Debugmode)
 		unlink(interfn);
 	else
 		abort();
@@ -282,7 +286,7 @@ frafatal(str)
 	if( intermedf != (FILE *) NULL)
 	{
 		fclose(intermedf);
-		if( ! debugmode)
+		if( ! Debugmode)
 			unlink(interfn);
 	}
 		
@@ -354,7 +358,7 @@ prtequvalue(fstr, lv)
 
 #define SYMPERLINE 3
 
-printsymbols()
+static printsymbols(FILE *fp)
 /*
 	description	print the symbols on the listing file, 3 symbols
 			across.  Only the first 15 characters are printed
@@ -370,28 +374,28 @@ printsymbols()
 	{
 		if(npl >= SYMPERLINE)
 		{
-			fputc('\n', loutf);
+			fputc('\n', fp);
 			npl = 0;
 		}
 
 		syp = symbindex[syn];
 
 		if(syp -> seg != SSG_UNDEF)
-			fprintf(loutf, "%8.8lx %-15.15s  ",syp -> value,
+			fprintf(fp, "%8.8lx %-15.15s  ",syp -> value,
 				syp -> symstr);
 		else
-			fprintf(loutf, "???????? %-15.15s  ", syp -> symstr);
+			fprintf(fp, "???????? %-15.15s  ", syp -> symstr);
 		npl++;
 	}
 
 	if(npl > 0)
-		fputc('\n', loutf);
+		fputc('\n', fp);
 
-	fputc('\f', loutf);
+	fputc('\f', fp);
 }
 
 
-filesymbols()
+static filesymbols(FILE *fp)
 /*
 	description	print the symbols to the symbol table file
 	globals		the symbol index array and the symbol table elements.
@@ -405,9 +409,9 @@ filesymbols()
 		syp = symbindex[syn];
 
 		if(syp -> seg != SSG_UNDEF)
-			fprintf(symbf, "%8.8lx %s\n",syp -> value,
+			fprintf(fp, "%8.8lx %s\n",syp -> value,
 				syp -> symstr);
 		else
-			fprintf(symbf, "???????? %s\n", syp -> symstr);
+			fprintf(fp, "???????? %s\n", syp -> symstr);
 	}
 }

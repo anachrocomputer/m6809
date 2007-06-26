@@ -40,8 +40,16 @@ int lineLflag = FALSE;
 static unsigned char	outresult[OUTRESULTLEN];
 static int	nextresult;
 static long 	genlocctr, resultloc;
-
 static char	*oeptr;
+
+static void outeval(void);
+static void flushlisthex(void);
+static void listhex(void);
+static void listouthex(void);
+static void outhexblock(void);
+static void flushhex(void);
+static void intelout(int type, long addr, int count, char data[]);
+static void flushsourceline(void);
 
 #define	MAXIMPWID	24
 
@@ -268,7 +276,7 @@ outphase()
 		flushlisthex();
 }
 
-outeval()
+static void outeval(void)
 /*
 	description	convert the polish form character string in the 
 			intermediate file 'D' line to binary values in the
@@ -512,7 +520,7 @@ static long lhaddr, lhnextaddr;
 static int lhnew, lhnext = 0;
 static unsigned char listbuffhex[NUMHEXPERL];
 
-flushlisthex()
+static void flushlisthex(void)
 /*
 	description	output the residue of the hexidecimal values for
 			the previous assembler statement.
@@ -523,7 +531,7 @@ flushlisthex()
 	lhnew = TRUE;
 }
 
-listhex()
+static void listhex(void)
 /*
 	description	buffer the output result to block the hexidecimal 
 			listing on the output file to NUMHEXPERL bytes per
@@ -555,7 +563,7 @@ listhex()
 	}
 }
 
-listouthex()
+static void listouthex(void)
 /*
 	description	print a line of hexidecimal on the listing
 	globals		the hex listing buffer
@@ -624,7 +632,7 @@ static int hnextsub;
 static char hlinebuff[INTELLEN];
 
 
-outhexblock()
+static void outhexblock(void)
 /*
 	description	buffer the output result to group adjacent output
 			data into longer lines.
@@ -658,7 +666,7 @@ outhexblock()
 	}
 }
 
-flushhex()
+static void flushhex(void)
 /*
 	description	flush the intel hex line buffer at the end of
 			the second pass
@@ -675,7 +683,7 @@ flushhex()
 }
 
 
-intelout(type, addr, count, data)
+static void intelout(type, addr, count, data)
 	int type;
 	long addr;
 	int count;
@@ -777,7 +785,7 @@ frp2error(str)
 	errorcnt++;
 }
 
-flushsourceline()
+static void flushsourceline(void)
 /*
 	description	flush listing line buffer before an error for
 			that line is printed
