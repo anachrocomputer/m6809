@@ -137,7 +137,6 @@ Global long 	locctr;
 extern FILE *yyin;
 extern FILE	*intermedf;
 extern int	listflag;
-extern int hexflag;
 Global FILE	*hexoutf, *loutf;
 extern int errorcnt, warncnt;
 
