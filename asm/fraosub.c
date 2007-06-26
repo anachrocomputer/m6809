@@ -139,7 +139,8 @@ static long dgethex()
 }
 	
 
-outphase()
+void outphase(hexflag)
+	int hexflag;
 /*
 	description	process all the lines in the intermediate file
 	globals		the input line

@@ -44,7 +44,7 @@ static char interfn[] =
  "/usr/tmp/frtXXXXXX";
 #endif
 int errorcnt = 0, warncnt = 0;
-int listflag = FALSE, hexflag = FALSE;
+int listflag = FALSE;
 static int Debugmode = FALSE;
 char hexcva[17] = "0123456789ABCDEF";
 
@@ -74,6 +74,7 @@ main(argc, argv)
 	int grv;
 	char *hexfn, *loutfn;
 	int hexvalid = FALSE;
+	int hexflag = FALSE;
 	char *symbfn;
 	FILE *symbf;
 	int  symbflag = FALSE;
@@ -236,7 +237,7 @@ main(argc, argv)
 	}
 
 	currfstk = 0;
-	outphase();
+	outphase(hexflag);
 
 	if(errorcnt > 0)
 		hexvalid = FALSE;
