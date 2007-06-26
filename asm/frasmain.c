@@ -50,7 +50,7 @@ static int debugmode = FALSE;
 static FILE *symbf;
 static char *symbfn;
 static int  symbflag = FALSE;
-char hexcva[17] = "0123456789abcdef";
+char hexcva[17] = "0123456789ABCDEF";
 
 #ifdef NOGETOPT
 #include "getopt.h"
