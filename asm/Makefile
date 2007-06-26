@@ -59,6 +59,11 @@ MAINDEPENDS =
 # MAINNEEDS = -DNOGETOPT
 # MAINDEPENDS = getopt.h
 
+$(TARGET) : frasmain.o frapsub.o fryylex.o $(TARGET).o fraosub.o
+	cc $(CFLAGS) -o $(TARGET) frasmain.o frapsub.o \
+		fraosub.o fryylex.o $(TARGET).o $(YACCLEXLIB)
+	rm -f fraytok.h
+
 clean :
 	rm -f *.o fraytok.h 
 	rm -f y.tab.[ch]
@@ -68,11 +73,6 @@ newmachine :
 	rm -f fraytok.h
 	rm -f fryylex.o
 	rm -f $(TARGET).c $(TARGET).h $(TARGET).o
-
-$(TARGET) : frasmain.o frapsub.o fryylex.o $(TARGET).o fraosub.o
-	cc $(CFLAGS) -o $(TARGET) frasmain.o frapsub.o \
-		fraosub.o fryylex.o $(TARGET).o $(YACCLEXLIB)
-	rm -f fraytok.h
 
 frasmain.o : frasmain.c  frasmdat.h $(MAINDEPENDS)
 	cc $(CFLAGS) $(MAINNEEDS) -c frasmain.c
