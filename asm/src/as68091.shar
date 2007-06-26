@@ -1,0 +1,1418 @@
+#!/bin/sh
+# This is Frankasm/As6809, a shell archive (shar 3.43)
+# made 12/04/1990 08:45 UTC by markz@ssc.uucp
+# Source directory /usr/mark/frank.shar
+#
+# existing files will NOT be overwritten unless -c is specified
+# This format requires very little intelligence at unshar time.
+# "if test", "echo", "true", and "sed" may be needed.
+#
+# This shar contains:
+# length  mode       name
+# ------ ---------- ------------------------------------------
+#    960 -r--r----- as6809.1
+#   7195 -r--r----- as6809.doc
+#   4768 -r--r----- as6809.tst
+#  10373 -r--r----- as6809.tut
+#  48850 -r--r--r-- as6809.y
+#
+# ============= as6809.1 ==============
+if test -f 'as6809.1' -a X"$1" != X"-c"; then
+	echo 'x - skipping as6809.1 (File already exists)'
+else
+echo 'x - extracting as6809.1 (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'as6809.1' &&
+X.TH AS6809 1L
+X.SH NAME
+Xas6809 \- cross assembler for microcomputers
+X.SH SYNOPSIS
+X.nf
+Xas6809 [-p cpu] [-l listfile] [-o hexfile] [-d] [-s symbolfile] input
+X.fi
+X.SH DESCRIPTION
+XThe as6809 command assembles the input file into a
+Xtext output file representing the program memory for a microcomputer.
+X
+XOptions
+X.IP "-p cpu"
+XIgnored by this program.
+X.IP "-l listfile"
+XOutput a file formated with the memory address, data, and source input lines.
+X.IP "-o hexfile"
+XOutput the memory data image in a form accepted by most prom programmers.
+X.IP "-h hexfile"
+XSame as \-o.
+X.IP \-d
+XSave the intermediate data file (see FILE) and abort the execution at the
+Xend of processing.
+X.IP "-s symbolfile"
+XPrint the symbol table values and names, one per line in the specified file.
+X.SH FILES
+X/usr/tmp/frtXXXXXX
+X.SH SEE ALSO
+XFrankenstein Cross Assemblers Users Manual (file base.doc)
+XAppendix for as6809 Frankenstein Assembler (file as6809.doc)
+X.SH NOTES
+XThere is only one input file.
+SHAR_EOF
+true || echo 'restore of as6809.1 failed'
+fi
+# ============= as6809.doc ==============
+if test -f 'as6809.doc' -a X"$1" != X"-c"; then
+	echo 'x - skipping as6809.doc (File already exists)'
+else
+echo 'x - extracting as6809.doc (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'as6809.doc' &&
+X.HM A 1 1 1 1 1 1
+X.H 1 "Appendix for as6809 Frankenstein Assembler"
+X.H 2 "Pseudo Operations"
+X.H 3 "Standard Pseudo Operation Mnemonics"
+X.VL 40 5 1
+X.LI "End"
+XEND
+X.LI "File Inclusion"
+XINCL
+XINCLUDE
+X.LI "If"
+XIF
+X.LI "Else"
+XELSE
+X.LI "End If"
+XENDI
+X.LI "Equate"
+XEQU
+X.LI "Set"
+XSET
+X.LI "Org"
+XORG
+X.LI "Reserve Memory"
+XRESERVE
+XRMB
+X.LI "Define Byte Data"
+XBYTE
+XDB
+XFCB
+X.LI "Define Word Data"
+XDW
+XFDB
+XWORD
+X.LI "Define String Data"
+XFCC
+XSTRING
+X.LI "Define Character Set Translation"
+XCHARSET
+X.LI "Define Character Value"
+XCHARDEF
+XCHD
+X.LI "Use Character Translation"
+XCHARUSE
+X.LE
+X.H 2 "Instructions"
+X.H 3 "Instruction List"
+X.TS H
+X;
+Xl l l.
+XOpcode	Syntax	Selection Criteria
+X.sp
+X.TH
+X.sp
+XABX	 
+X.sp
+XADCA	 '#' expr
+XADCA	 expr	DIRECT
+XADCA	 expr	EXTENDED
+XADCA	 indexed
+X.sp
+XADCB	 '#' expr
+XADCB	 expr	DIRECT
+XADCB	 expr	EXTENDED
+XADCB	 indexed
+X.sp
+XADDA	 '#' expr
+XADDA	 expr	DIRECT
+XADDA	 expr	EXTENDED
+XADDA	 indexed
+X.sp
+XADDB	 '#' expr
+XADDB	 expr	DIRECT
+XADDB	 expr	EXTENDED
+XADDB	 indexed
+X.sp
+XADDD	 '#' expr
+XADDD	 expr	DIRECT
+XADDD	 expr	EXTENDED
+XADDD	 indexed
+X.sp
+XANDA	 '#' expr
+XANDA	 expr	DIRECT
+XANDA	 expr	EXTENDED
+XANDA	 indexed
+X.sp
+XANDB	 '#' expr
+XANDB	 expr	DIRECT
+XANDB	 expr	EXTENDED
+XANDB	 indexed
+X.sp
+XANDCC	 '#' expr
+X.sp
+XASL	 expr	DIRECT
+XASL	 expr	EXTENDED
+XASL	 indexed
+X.sp
+XASLA	 
+X.sp
+XASLB	 
+X.sp
+XASR	 expr	DIRECT
+XASR	 expr	EXTENDED
+XASR	 indexed
+X.sp
+XASRA	 
+X.sp
+XASRB	 
+X.sp
+XBCC	 expr
+X.sp
+XBCS	 expr
+X.sp
+XBEQ	 expr
+X.sp
+XBGE	 expr
+X.sp
+XBGT	 expr
+X.sp
+XBHI	 expr
+X.sp
+XBHS	 expr
+X.sp
+XBITA	 '#' expr
+XBITA	 expr	DIRECT
+XBITA	 expr	EXTENDED
+XBITA	 indexed
+X.sp
+XBITB	 '#' expr
+XBITB	 expr	DIRECT
+XBITB	 expr	EXTENDED
+XBITB	 indexed
+X.sp
+XBLE	 expr
+X.sp
+XBLO	 expr
+X.sp
+XBLS	 expr
+X.sp
+XBLT	 expr
+X.sp
+XBMI	 expr
+X.sp
+XBNE	 expr
+X.sp
+XBPL	 expr
+X.sp
+XBRA	 expr
+X.sp
+XBRN	 expr
+X.sp
+XBSR	 expr
+X.sp
+XBVC	 expr
+X.sp
+XBVS	 expr
+X.sp
+XCLR	 expr	DIRECT
+XCLR	 expr	EXTENDED
+XCLR	 indexed
+X.sp
+XCLRA	 
+X.sp
+XCLRB	 
+X.sp
+XCMPA	 '#' expr
+XCMPA	 expr	DIRECT
+XCMPA	 expr	EXTENDED
+XCMPA	 indexed
+X.sp
+XCMPB	 '#' expr
+XCMPB	 expr	DIRECT
+XCMPB	 expr	EXTENDED
+XCMPB	 indexed
+X.sp
+XCMPD	 '#' expr
+XCMPD	 expr	DIRECT
+XCMPD	 expr	EXTENDED
+XCMPD	 indexed
+X.sp
+XCMPS	 '#' expr
+XCMPS	 expr	DIRECT
+XCMPS	 expr	EXTENDED
+XCMPS	 indexed
+X.sp
+XCMPU	 '#' expr
+XCMPU	 expr	DIRECT
+XCMPU	 expr	EXTENDED
+XCMPU	 indexed
+X.sp
+XCMPX	 '#' expr
+XCMPX	 expr	DIRECT
+XCMPX	 expr	EXTENDED
+XCMPX	 indexed
+X.sp
+XCMPY	 '#' expr
+XCMPY	 expr	DIRECT
+XCMPY	 expr	EXTENDED
+XCMPY	 indexed
+X.sp
+XCOM	 expr	DIRECT
+XCOM	 expr	EXTENDED
+XCOM	 indexed
+X.sp
+XCOMA	 
+X.sp
+XCOMB	 
+X.sp
+XCWAI	 '#' expr
+X.sp
+XDAA	 
+X.sp
+XDEC	 expr	DIRECT
+XDEC	 expr	EXTENDED
+XDEC	 indexed
+X.sp
+XDECA	 
+X.sp
+XDECB	 
+X.sp
+XEORA	 '#' expr
+XEORA	 expr	DIRECT
+XEORA	 expr	EXTENDED
+XEORA	 indexed
+X.sp
+XEORB	 '#' expr
+XEORB	 expr	DIRECT
+XEORB	 expr	EXTENDED
+XEORB	 indexed
+X.sp
+XEXG	 register ',' register
+X.sp
+XINC	 expr	DIRECT
+XINC	 expr	EXTENDED
+XINC	 indexed
+X.sp
+XINCA	 
+X.sp
+XINCB	 
+X.sp
+XJMP	 expr	DIRECT
+XJMP	 expr	EXTENDED
+XJMP	 indexed
+X.sp
+XJSR	 expr	DIRECT
+XJSR	 expr	EXTENDED
+XJSR	 indexed
+X.sp
+XLBCC	 expr
+X.sp
+XLBCS	 expr
+X.sp
+XLBEQ	 expr
+X.sp
+XLBGE	 expr
+X.sp
+XLBGT	 expr
+X.sp
+XLBHI	 expr
+X.sp
+XLBHS	 expr
+X.sp
+XLBLE	 expr
+X.sp
+XLBLO	 expr
+X.sp
+XLBLS	 expr
+X.sp
+XLBLT	 expr
+X.sp
+XLBMI	 expr
+X.sp
+XLBNE	 expr
+X.sp
+XLBPL	 expr
+X.sp
+XLBRA	 expr
+X.sp
+XLBRN	 expr
+X.sp
+XLBSR	 expr
+X.sp
+XLBVC	 expr
+X.sp
+XLBVS	 expr
+X.sp
+XLDA	 '#' expr
+XLDA	 expr	DIRECT
+XLDA	 expr	EXTENDED
+XLDA	 indexed
+X.sp
+XLDB	 '#' expr
+XLDB	 expr	DIRECT
+XLDB	 expr	EXTENDED
+XLDB	 indexed
+X.sp
+XLDD	 '#' expr
+XLDD	 expr	DIRECT
+XLDD	 expr	EXTENDED
+XLDD	 indexed
+X.sp
+XLDS	 '#' expr
+XLDS	 expr	DIRECT
+XLDS	 expr	EXTENDED
+XLDS	 indexed
+X.sp
+XLDU	 '#' expr
+XLDU	 expr	DIRECT
+XLDU	 expr	EXTENDED
+XLDU	 indexed
+X.sp
+XLDX	 '#' expr
+XLDX	 expr	DIRECT
+XLDX	 expr	EXTENDED
+XLDX	 indexed
+X.sp
+XLDY	 '#' expr
+XLDY	 expr	DIRECT
+XLDY	 expr	EXTENDED
+XLDY	 indexed
+X.sp
+XLEAS	 indexed
+X.sp
+XLEAU	 indexed
+X.sp
+XLEAX	 indexed
+X.sp
+XLEAY	 indexed
+X.sp
+XLSL	 expr	DIRECT
+XLSL	 expr	EXTENDED
+XLSL	 indexed
+X.sp
+XLSLA	 
+X.sp
+XLSLB	 
+X.sp
+XLSR	 expr	DIRECT
+XLSR	 expr	EXTENDED
+XLSR	 indexed
+X.sp
+XLSRA	 
+X.sp
+XLSRB	 
+X.sp
+XMUL	 
+X.sp
+XNEG	 expr	DIRECT
+XNEG	 expr	EXTENDED
+XNEG	 indexed
+X.sp
+XNEGA	 
+X.sp
+XNEGB	 
+X.sp
+XNOP	 
+X.sp
+XORA	 '#' expr
+XORA	 expr	DIRECT
+XORA	 expr	EXTENDED
+XORA	 indexed
+X.sp
+XORB	 '#' expr
+XORB	 expr	DIRECT
+XORB	 expr	EXTENDED
+XORB	 indexed
+X.sp
+XORCC	 '#' expr
+X.sp
+XPSHS	 register list
+X.sp
+XPSHU	 register list
+X.sp
+XPULS	 register list
+X.sp
+XPULU	 register list
+X.sp
+XROL	 expr	DIRECT
+XROL	 expr	EXTENDED
+XROL	 indexed
+X.sp
+XROLA	 
+X.sp
+XROLB	 
+X.sp
+XROR	 expr	DIRECT
+XROR	 expr	EXTENDED
+XROR	 indexed
+X.sp
+XRORA	 
+X.sp
+XRORB	 
+X.sp
+XRTI	 
+X.sp
+XRTS	 
+X.sp
+XSBCA	 '#' expr
+XSBCA	 expr	DIRECT
+XSBCA	 expr	EXTENDED
+XSBCA	 indexed
+X.sp
+XSBCB	 '#' expr
+XSBCB	 expr	DIRECT
+XSBCB	 expr	EXTENDED
+XSBCB	 indexed
+X.sp
+XSEX	 
+X.sp
+XSTA	 expr	DIRECT
+XSTA	 expr	EXTENDED
+XSTA	 indexed
+X.sp
+XSTB	 expr	DIRECT
+XSTB	 expr	EXTENDED
+XSTB	 indexed
+X.sp
+XSTD	 expr	DIRECT
+XSTD	 expr	EXTENDED
+XSTD	 indexed
+X.sp
+XSTS	 expr	DIRECT
+XSTS	 expr	EXTENDED
+XSTS	 indexed
+X.sp
+XSTU	 expr	DIRECT
+XSTU	 expr	EXTENDED
+XSTU	 indexed
+X.sp
+XSTX	 expr	DIRECT
+XSTX	 expr	EXTENDED
+XSTX	 indexed
+X.sp
+XSTY	 expr	DIRECT
+XSTY	 expr	EXTENDED
+XSTY	 indexed
+X.sp
+XSUBA	 '#' expr
+XSUBA	 expr	DIRECT
+XSUBA	 expr	EXTENDED
+XSUBA	 indexed
+X.sp
+XSUBB	 '#' expr
+XSUBB	 expr	DIRECT
+XSUBB	 expr	EXTENDED
+XSUBB	 indexed
+X.sp
+XSUBD	 '#' expr
+XSUBD	 expr	DIRECT
+XSUBD	 expr	EXTENDED
+XSUBD	 indexed
+X.sp
+XSWI2	 
+X.sp
+XSWI3	 
+X.sp
+XSWI	 
+X.sp
+XSYNC	 
+X.sp
+XTFR	 register ',' register
+X.sp
+XTST	 expr	DIRECT
+XTST	 expr	EXTENDED
+XTST	 indexed
+X.sp
+XTSTA	 
+X.sp
+XTSTB	 
+X.TE
+X.H 3 "Operand Types"
+X.H 4 "register list"
+XThe operands for the push and pull operations consist of a list of
+Xone or more registers seperated by commas.
+XThe stack pointer associated with an operator will give an error if
+Xit occurs in the list.
+XThe registers can be D, X, Y, U, S, PC, A, B, CC, DP and their lower case
+Xequivalents.
+XFor the push and pull operations, the D register is an alias for the
+XA and B registers, and will result in two selection bits set in the
+Xpostbyte.
+X.H 4 "indexed"
+XThe indexed mode operands are in the forms.
+X.VL 25 5 1
+X.LI ", index"
+X.LI "expr , index"
+X.LI "accumulator , index"
+X.LI ", index +"
+X.LI ", index ++"
+X.LI ", - index"
+X.LI ", -- index"
+X.LI "expr , PCR"
+X.LI "[ , index ]"
+X.LI "[ expr , index ]"
+X.LI "[ accumulator , index ]"
+X.LI "[ , index ++ ]"
+X.LI "[ , -- index ]"
+X.LI "[ expr , PCR ]"
+X.LI "[ expr ]"
+X.LE
+X.P
+XIndex can be any of X, Y, S, U (or their lower case equivalents). 
+XAccumulator can be any of A, B, D (or their lower case equivalents).
+X.P
+XThe short offset forms will only be used if the expression in the operand
+Xhas a value defined at the first pass, and the value is small enough to fit.
+XExpressions that have an as yet undefined value will use the 16 bit offset 
+Xform.
+X.H 3 "Selection Criteria Keywords"
+X.VL 25 5 
+X.LI DIRECT
+XThe instruction can use the direct addressing mode.  
+XThe expression must have a value between 0 and 255 that is defined when the
+Xinstruction is processed in the input pass.
+X.LI EXTENDED
+XThe instruction can use the extended addressing mode.
+X.LE
+X.H 3 "Apostrophes"
+XThe apostrophes in the syntax field are a notation used for the
+Xparser generator and are not put in the assembler source statement.
+X.H 2 "Notes"
+X.H 3 "Reserved Symbols"
+X.H 4 "Machine Dependent Reserved Symbols"
+XA
+XB
+XCC
+XD
+XDP
+XPC
+XPCR
+XS
+XU
+XX
+XY
+Xa
+Xb
+Xcc
+Xd
+Xdp
+Xpc
+Xpcr
+Xs
+Xu
+Xx
+Xy
+X.H 4 "Standard Reserved Symbols"
+XAND
+XDEFINED
+XEQ
+XGE
+XGT
+XHIGH
+XLE
+XLOW
+XLT
+XMOD
+XNE
+XNOT
+XOR
+XSHL
+XSHR
+XXOR
+Xand
+Xdefined
+Xeq
+Xge
+Xgt
+Xhigh
+Xle
+Xlow
+Xlt
+Xmod
+Xne
+Xnot
+Xor
+Xshl
+Xshr
+Xxor
+X.TC 1 1 7
+SHAR_EOF
+true || echo 'restore of as6809.doc failed'
+fi
+# ============= as6809.tst ==============
+if test -f 'as6809.tst' -a X"$1" != X"-c"; then
+	echo 'x - skipping as6809.tst (File already exists)'
+else
+echo 'x - extracting as6809.tst (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'as6809.tst' &&
+Xlbtarget equ 7890h
+Xstuff equ $99
+Xdirect equ 55h
+Xextended equ 6543h
+Xextend equ extended
+Xlong equ 567h
+Xmiddle equ 45
+Xshort equ -5
+X	 abx
+X	 adca # stuff
+X	 adca ,y
+X	 adca direct
+X	 adca extended
+X	 adcb # stuff
+X	 adcb ,y
+X	 adcb direct
+X	 adcb extended
+X	 adda # stuff
+X	 adda ,y
+X	 adda direct
+X	 adda extended
+X	 addb # stuff
+X	 addb ,y
+X	 addb direct
+X	 addb extended
+X	 addd # stuff
+X	 addd ,y
+X	 addd direct
+X	 addd extended
+X	 anda # stuff
+X	 anda ,y
+X	 anda direct
+X	 anda extended
+X	 andb # stuff
+X	 andb ,y
+X	 andb direct
+X	 andb extended
+X	 andcc # stuff
+X	 asl ,y
+X	 asl direct
+X	 asl extend
+X	 asla
+X	 aslb
+X	 asr ,y
+X	 asr direct
+X	 asr extend
+X	 asra
+X	 asrb
+X	 bcc btarget
+X	 bcs btarget
+X	 beq btarget
+Xbtarget bge btarget
+X	 bgt btarget
+X	 bhi btarget
+X	 bhs btarget
+X	 bita # stuff
+X	 bita ,y
+X	 bita direct
+X	 bita extended
+X	 bitb # stuff
+X	 bitb ,y
+X	 bitb direct
+X	 bitb extended
+X	 ble btarget
+X	 blo btarget
+X	 bls btarget
+X	 blt btarget
+X	 bmi btarget
+X	 bne btarget
+X	 bpl btarget
+X	 bra btarget
+X	 brn btarget
+X	 bsr btarget
+X	 bvc btarget
+X	 bvs btarget
+X	 clr ,y
+X	 clr direct
+X	 clr extend
+X	 clra
+X	 clrb
+X	 cmpa # stuff
+X	 cmpa ,y
+X	 cmpa direct
+X	 cmpa extended
+X	 cmpb # stuff
+X	 cmpb ,y
+X	 cmpb direct
+X	 cmpb extended
+X	 cmpd # stuff
+X	 cmpd ,y
+X	 cmpd direct
+X	 cmpd extended
+X	 cmps # stuff
+X	 cmps ,y
+X	 cmps direct
+X	 cmps extended
+X	 cmpu # stuff
+X	 cmpu ,y
+X	 cmpu direct
+X	 cmpu extended
+X	 cmpx # stuff
+X	 cmpx ,y
+X	 cmpx direct
+X	 cmpx extended
+X	 cmpy # stuff
+X	 cmpy ,y
+X	 cmpy direct
+X	 cmpy extended
+X	 com ,y
+X	 com direct
+X	 com extend
+X	 coma
+X	 comb
+X	 cwai # stuff
+X	 daa
+X	 dec ,y
+X	 dec direct
+X	 dec extend
+X	 deca
+X	 decb
+X	 eora # stuff
+X	 eora ,y
+X	 eora direct
+X	 eora extended
+X	 eorb # stuff
+X	 eorb ,y
+X	 eorb direct
+X	 eorb extended
+X	 exg a,b
+X	 exg s,pc
+X	 exg x,y
+X	 inc ,y
+X	 inc direct
+X	 inc extend
+X	 inca
+X	 incb
+X	 jmp ,y
+X	 jmp direct
+X	 jmp extend
+X	 jsr ,y
+X	 jsr direct
+X	 jsr extend
+X	 lbcc lbtarget
+X	 lbcs lbtarget
+X	 lbeq lbtarget
+X	 lbge lbtarget
+X	 lbgt lbtarget
+X	 lbhi lbtarget
+X	 lbhs lbtarget
+X	 lble lbtarget
+X	 lblo lbtarget
+X	 lbls lbtarget
+X	 lblt lbtarget
+X	 lbmi lbtarget
+X	 lbne lbtarget
+X	 lbpl lbtarget
+X	 lbra lbtarget
+X	 lbrn lbtarget
+X	 lbsr lbtarget
+X	 lbvc lbtarget
+X	 lbvs lbtarget
+X	 lda # stuff
+X	 lda ,y
+X	 lda direct
+X	 lda extended
+X	 ldb # stuff
+X	 ldb ,y
+X	 ldb direct
+X	 ldb extended
+X	 ldd # stuff
+X	 ldd ,y
+X	 ldd direct
+X	 ldd extended
+X	 lds # stuff
+X	 lds ,y
+X	 lds direct
+X	 lds extended
+X	 ldu # stuff
+X	 ldu ,y
+X	 ldu direct
+X	 ldu extended
+X	 ldx # stuff
+X	 ldx ,y
+X	 ldx direct
+X	 ldx extended
+X	 ldy # stuff
+X	 ldy ,y
+X	 ldy direct
+X	 ldy extended
+X	 leas ,--s
+X	 leau ,--s
+X	 leax ,--s
+X	 leay ,--s
+X	 leay ,--u
+X	 leay ,--x
+X	 leay ,--y
+X	 leay ,-s
+X	 leay ,-u
+X	 leay ,-x
+X	 leay ,-y
+X	 leay ,s
+X	 leay ,s+
+X	 leay ,s++
+X	 leay ,u
+X	 leay ,u+
+X	 leay ,u++
+X	 leay ,x
+X	 leay ,x+
+X	 leay ,x++
+X	 leay ,y
+X	 leay ,y+
+X	 leay ,y++
+X	 leay [,--s]
+X	 leay [,--u]
+X	 leay [,--x]
+X	 leay [,--y]
+X	 leay [,s++]
+X	 leay [,s]
+X	 leay [,u++]
+X	 leay [,u]
+X	 leay [,x++]
+X	 leay [,x]
+X	 leay [,y++]
+X	 leay [,y]
+X	 leay [a,s]
+X	 leay [a,u]
+X	 leay [a,x]
+X	 leay [a,y]
+X	 leay [b,s]
+X	 leay [b,u]
+X	 leay [b,x]
+X	 leay [b,y]
+X	 leay [d,s]
+X	 leay [d,u]
+X	 leay [d,x]
+X	 leay [d,y]
+X	 leay [long,s]
+X	 leay [long,u]
+X	 leay [long,x]
+X	 leay [long,y]
+X	 leay [long]
+X	 leay [middle,s]
+X	 leay [middle,u]
+X	 leay [middle,x]
+X	 leay [middle,y]
+X	 leay [*+3456h,pcr]
+X	 leay [*+67h,pcr]
+X	 leay [short,s]
+X	 leay [short,u]
+X	 leay [short,x]
+X	 leay [short,y]
+X	 leay a,s
+X	 leay a,u
+X	 leay a,x
+X	 leay a,y
+X	 leay b,s
+X	 leay b,u
+X	 leay b,x
+X	 leay b,y
+X	 leay d,s
+X	 leay d,u
+X	 leay d,x
+X	 leay d,y
+X	 leay long,s
+X	 leay long,u
+X	 leay long,x
+X	 leay long,y
+X	 leay middle,s
+X	 leay middle,u
+X	 leay middle,x
+X	 leay middle,y
+X	 leay *+3456h,pcr
+X	 leay *+67h,pcr
+X	 leay short,s
+X	 leay short,u
+X	 leay short,x
+X	 leay short,y
+X	 lsl ,y
+X	 lsl direct
+X	 lsl extend
+X	 lsla
+X	 lslb
+X	 lsr ,y
+X	 lsr direct
+X	 lsr extend
+X	 lsra
+X	 lsrb
+X	 mul
+X	 neg ,y
+X	 neg direct
+X	 neg extend
+X	 nega
+X	 negb
+X	 nop
+X	 ora # stuff
+X	 ora ,y
+X	 ora direct
+X	 ora extended
+X	 orb # stuff
+X	 orb ,y
+X	 orb direct
+X	 orb extended
+X	 orcc # stuff
+X	 pshs a,b,cc,x
+X	 pshu a,b,cc,x
+X	 puls a,b,cc,x
+X	 pulu a,b,cc,x
+X	 rol ,y
+X	 rol direct
+X	 rol extend
+X	 rola
+X	 rolb
+X	 ror ,y
+X	 ror direct
+X	 ror extend
+X	 rora
+X	 rorb
+X	 rti
+X	 rts
+X	 sbca # stuff
+X	 sbca ,y
+X	 sbca direct
+X	 sbca extended
+X	 sbcb # stuff
+X	 sbcb ,y
+X	 sbcb direct
+X	 sbcb extended
+X	 sex
+X	 sta ,y
+X	 sta direct
+X	 sta extended
+X	 stb ,y
+X	 stb direct
+X	 stb extended
+X	 std ,y
+X	 std direct
+X	 std extended
+X	 sts ,y
+X	 sts direct
+X	 sts extended
+X	 stu ,y
+X	 stu direct
+X	 stu extended
+X	 stx ,y
+X	 stx direct
+X	 stx extended
+X	 sty ,y
+X	 sty direct
+X	 sty extended
+X	 suba # stuff
+X	 suba ,y
+X	 suba direct
+X	 suba extended
+X	 subb # stuff
+X	 subb ,y
+X	 subb direct
+X	 subb extended
+X	 subd # stuff
+X	 subd ,y
+X	 subd direct
+X	 subd extended
+X	 swi
+X	 swi2
+X	 swi3
+X	 sync
+X	 tfr a,b
+X	 tfr s,pc
+X	 tfr x,y
+X	 tst ,y
+X	 tst direct
+X	 tst extend
+X	 tsta
+X	 tstb
+SHAR_EOF
+true || echo 'restore of as6809.tst failed'
+fi
+# ============= as6809.tut ==============
+if test -f 'as6809.tut' -a X"$1" != X"-c"; then
+	echo 'x - skipping as6809.tut (File already exists)'
+else
+echo 'x - extracting as6809.tut (Text)'
+sed 's/^X//' << 'SHAR_EOF' > 'as6809.tut' &&
+X00007890 lbtarget         00000099 stuff            00000055 direct           
+X00006543 extended         00006543 extend           00000567 long             
+X0000002d middle           fffffffb short            0000005b btarget          
+X 0x7890                 lbtarget equ 7890h
+X 0x99                   stuff equ $99
+X 0x55                   direct equ 55h
+X 0x6543                 extended equ 6543h
+X 0x6543                 extend equ extended
+X 0x567                  long equ 567h
+X 0x2d                   middle equ 45
+X 0xfffffffb             short equ -5
+X0000 3a 			 abx
+X0001 89 99 			 adca # stuff
+X0003 a9 a4 			 adca ,y
+X0005 99 55 			 adca direct
+X0007 b9 65 43 			 adca extended
+X000a c9 99 			 adcb # stuff
+X000c e9 a4 			 adcb ,y
+X000e d9 55 			 adcb direct
+X0010 f9 65 43 			 adcb extended
+X0013 8b 99 			 adda # stuff
+X0015 ab a4 			 adda ,y
+X0017 9b 55 			 adda direct
+X0019 bb 65 43 			 adda extended
+X001c cb 99 			 addb # stuff
+X001e eb a4 			 addb ,y
+X0020 db 55 			 addb direct
+X0022 fb 65 43 			 addb extended
+X0025 c3 00 99 			 addd # stuff
+X0028 e3 a4 			 addd ,y
+X002a d3 55 			 addd direct
+X002c f3 65 43 			 addd extended
+X002f 84 99 			 anda # stuff
+X0031 a4 a4 			 anda ,y
+X0033 94 55 			 anda direct
+X0035 b4 65 43 			 anda extended
+X0038 c4 99 			 andb # stuff
+X003a e4 a4 			 andb ,y
+X003c d4 55 			 andb direct
+X003e f4 65 43 			 andb extended
+X0041 1c 99 			 andcc # stuff
+X0043 68 a4 			 asl ,y
+X0045 08 55 			 asl direct
+X0047 78 65 43 			 asl extend
+X004a 48 			 asla
+X004b 58 			 aslb
+X004c 67 a4 			 asr ,y
+X004e 07 55 			 asr direct
+X0050 77 65 43 			 asr extend
+X0053 47 			 asra
+X0054 57 			 asrb
+X0055 24 04 			 bcc btarget
+X0057 25 02 			 bcs btarget
+X0059 27 00 			 beq btarget
+X005b 2c fe 		btarget bge btarget
+X005d 2e fc 			 bgt btarget
+X005f 22 fa 			 bhi btarget
+X0061 24 f8 			 bhs btarget
+X0063 85 99 			 bita # stuff
+X0065 a5 a4 			 bita ,y
+X0067 95 55 			 bita direct
+X0069 b5 65 43 			 bita extended
+X006c c5 99 			 bitb # stuff
+X006e e5 a4 			 bitb ,y
+X0070 d5 55 			 bitb direct
+X0072 f5 65 43 			 bitb extended
+X0075 2f e4 			 ble btarget
+X0077 25 e2 			 blo btarget
+X0079 23 e0 			 bls btarget
+X007b 2d de 			 blt btarget
+X007d 2b dc 			 bmi btarget
+X007f 26 da 			 bne btarget
+X0081 2a d8 			 bpl btarget
+X0083 20 d6 			 bra btarget
+X0085 21 d4 			 brn btarget
+X0087 8d d2 			 bsr btarget
+X0089 28 d0 			 bvc btarget
+X008b 29 ce 			 bvs btarget
+X008d 6f a4 			 clr ,y
+X008f 0f 55 			 clr direct
+X0091 7f 65 43 			 clr extend
+X0094 4f 			 clra
+X0095 5f 			 clrb
+X0096 81 99 			 cmpa # stuff
+X0098 a1 a4 			 cmpa ,y
+X009a 91 55 			 cmpa direct
+X009c b1 65 43 			 cmpa extended
+X009f c1 99 			 cmpb # stuff
+X00a1 e1 a4 			 cmpb ,y
+X00a3 d1 55 			 cmpb direct
+X00a5 f1 65 43 			 cmpb extended
+X00a8 10 83 00 99 		 cmpd # stuff
+X00ac 10 a3 a4 			 cmpd ,y
+X00af 10 93 55 			 cmpd direct
+X00b2 10 b3 65 43 		 cmpd extended
+X00b6 11 8c 00 99 		 cmps # stuff
+X00ba 11 ac a4 			 cmps ,y
+X00bd 11 9c 55 			 cmps direct
+X00c0 11 bc 65 43 		 cmps extended
+X00c4 11 83 00 99 		 cmpu # stuff
+X00c8 11 a3 a4 			 cmpu ,y
+X00cb 11 93 55 			 cmpu direct
+X00ce 11 b3 65 43 		 cmpu extended
+X00d2 8c 00 99 			 cmpx # stuff
+X00d5 ac a4 			 cmpx ,y
+X00d7 9c 55 			 cmpx direct
+X00d9 bc 65 43 			 cmpx extended
+X00dc 10 8c 00 99 		 cmpy # stuff
+X00e0 10 ac a4 			 cmpy ,y
+X00e3 10 9c 55 			 cmpy direct
+X00e6 10 bc 65 43 		 cmpy extended
+X00ea 63 a4 			 com ,y
+X00ec 03 55 			 com direct
+X00ee 73 65 43 			 com extend
+X00f1 43 			 coma
+X00f2 53 			 comb
+X00f3 3c 99 			 cwai # stuff
+X00f5 19 			 daa
+X00f6 6a a4 			 dec ,y
+X00f8 0a 55 			 dec direct
+X00fa 7a 65 43 			 dec extend
+X00fd 4a 			 deca
+X00fe 5a 			 decb
+X00ff 88 99 			 eora # stuff
+X0101 a8 a4 			 eora ,y
+X0103 98 55 			 eora direct
+X0105 b8 65 43 			 eora extended
+X0108 c8 99 			 eorb # stuff
+X010a e8 a4 			 eorb ,y
+X010c d8 55 			 eorb direct
+X010e f8 65 43 			 eorb extended
+X0111 1e 89 			 exg a,b
+X0113 1e 45 			 exg s,pc
+X0115 1e 12 			 exg x,y
+X0117 6c a4 			 inc ,y
+X0119 0c 55 			 inc direct
+X011b 7c 65 43 			 inc extend
+X011e 4c 			 inca
+X011f 5c 			 incb
+X0120 6e a4 			 jmp ,y
+X0122 0e 55 			 jmp direct
+X0124 7e 65 43 			 jmp extend
+X0127 ad a4 			 jsr ,y
+X0129 9d 55 			 jsr direct
+X012b bd 65 43 			 jsr extend
+X012e 10 24 77 5e 		 lbcc lbtarget
+X0132 10 25 77 5a 		 lbcs lbtarget
+X0136 10 27 77 56 		 lbeq lbtarget
+X013a 10 2c 77 52 		 lbge lbtarget
+X013e 10 2e 77 4e 		 lbgt lbtarget
+X0142 10 22 77 4a 		 lbhi lbtarget
+X0146 10 24 77 46 		 lbhs lbtarget
+X014a 10 2f 77 42 		 lble lbtarget
+X014e 10 25 77 3e 		 lblo lbtarget
+X0152 10 23 77 3a 		 lbls lbtarget
+X0156 10 2d 77 36 		 lblt lbtarget
+X015a 10 2b 77 32 		 lbmi lbtarget
+X015e 10 26 77 2e 		 lbne lbtarget
+X0162 10 2a 77 2a 		 lbpl lbtarget
+X0166 16 77 27 			 lbra lbtarget
+X0169 10 21 77 23 		 lbrn lbtarget
+X016d 17 77 20 			 lbsr lbtarget
+X0170 10 28 77 1c 		 lbvc lbtarget
+X0174 10 29 77 18 		 lbvs lbtarget
+X0178 86 99 			 lda # stuff
+X017a a6 a4 			 lda ,y
+X017c 96 55 			 lda direct
+X017e b6 65 43 			 lda extended
+X0181 c6 99 			 ldb # stuff
+X0183 e6 a4 			 ldb ,y
+X0185 d6 55 			 ldb direct
+X0187 f6 65 43 			 ldb extended
+X018a cc 00 99 			 ldd # stuff
+X018d ec a4 			 ldd ,y
+X018f dc 55 			 ldd direct
+X0191 fc 65 43 			 ldd extended
+X0194 10 ce 00 99 		 lds # stuff
+X0198 10 ee a4 			 lds ,y
+X019b 10 de 55 			 lds direct
+X019e 10 fe 65 43 		 lds extended
+X01a2 ce 00 99 			 ldu # stuff
+X01a5 ee a4 			 ldu ,y
+X01a7 de 55 			 ldu direct
+X01a9 fe 65 43 			 ldu extended
+X01ac 8e 00 99 			 ldx # stuff
+X01af ae a4 			 ldx ,y
+X01b1 9e 55 			 ldx direct
+X01b3 be 65 43 			 ldx extended
+X01b6 10 8e 00 99 		 ldy # stuff
+X01ba 10 ae a4 			 ldy ,y
+X01bd 10 9e 55 			 ldy direct
+X01c0 10 be 65 43 		 ldy extended
+X01c4 32 e3 			 leas ,--s
+X01c6 33 e3 			 leau ,--s
+X01c8 30 e3 			 leax ,--s
+X01ca 31 e3 			 leay ,--s
+X01cc 31 c3 			 leay ,--u
+X01ce 31 83 			 leay ,--x
+X01d0 31 a3 			 leay ,--y
+X01d2 31 e2 			 leay ,-s
+X01d4 31 c2 			 leay ,-u
+X01d6 31 82 			 leay ,-x
+X01d8 31 a2 			 leay ,-y
+X01da 31 e4 			 leay ,s
+X01dc 31 e0 			 leay ,s+
+X01de 31 e1 			 leay ,s++
+X01e0 31 c4 			 leay ,u
+X01e2 31 c0 			 leay ,u+
+X01e4 31 c1 			 leay ,u++
+X01e6 31 84 			 leay ,x
+X01e8 31 80 			 leay ,x+
+X01ea 31 81 			 leay ,x++
+X01ec 31 a4 			 leay ,y
+X01ee 31 a0 			 leay ,y+
+X01f0 31 a1 			 leay ,y++
+X01f2 31 f3 			 leay [,--s]
+X01f4 31 d3 			 leay [,--u]
+X01f6 31 93 			 leay [,--x]
+X01f8 31 b3 			 leay [,--y]
+X01fa 31 f1 			 leay [,s++]
+X01fc 31 f4 			 leay [,s]
+X01fe 31 d1 			 leay [,u++]
+X0200 31 d4 			 leay [,u]
+X0202 31 91 			 leay [,x++]
+X0204 31 94 			 leay [,x]
+X0206 31 b1 			 leay [,y++]
+X0208 31 b4 			 leay [,y]
+X020a 31 f6 			 leay [a,s]
+X020c 31 d6 			 leay [a,u]
+X020e 31 96 			 leay [a,x]
+X0210 31 b6 			 leay [a,y]
+X0212 31 f5 			 leay [b,s]
+X0214 31 d5 			 leay [b,u]
+X0216 31 95 			 leay [b,x]
+X0218 31 b5 			 leay [b,y]
+X021a 31 fb 			 leay [d,s]
+X021c 31 db 			 leay [d,u]
+X021e 31 9b 			 leay [d,x]
+X0220 31 bb 			 leay [d,y]
+X0222 31 f9 05 67 		 leay [long,s]
+X0226 31 d9 05 67 		 leay [long,u]
+X022a 31 99 05 67 		 leay [long,x]
+X022e 31 b9 05 67 		 leay [long,y]
+X0232 31 9f 05 67 		 leay [long]
+X0236 31 f8 2d 			 leay [middle,s]
+X0239 31 d8 2d 			 leay [middle,u]
+X023c 31 98 2d 			 leay [middle,x]
+X023f 31 b8 2d 			 leay [middle,y]
+X0242 31 9d 34 52 		 leay [*+3456h,pcr]
+X0246 31 9c 64 			 leay [*+67h,pcr]
+X0249 31 f8 fb 			 leay [short,s]
+X024c 31 d8 fb 			 leay [short,u]
+X024f 31 98 fb 			 leay [short,x]
+X0252 31 b8 fb 			 leay [short,y]
+X0255 31 e6 			 leay a,s
+X0257 31 c6 			 leay a,u
+X0259 31 86 			 leay a,x
+X025b 31 a6 			 leay a,y
+X025d 31 e5 			 leay b,s
+X025f 31 c5 			 leay b,u
+X0261 31 85 			 leay b,x
+X0263 31 a5 			 leay b,y
+X0265 31 eb 			 leay d,s
+X0267 31 cb 			 leay d,u
+X0269 31 8b 			 leay d,x
+X026b 31 ab 			 leay d,y
+X026d 31 e9 05 67 		 leay long,s
+X0271 31 c9 05 67 		 leay long,u
+X0275 31 89 05 67 		 leay long,x
+X0279 31 a9 05 67 		 leay long,y
+X027d 31 e8 2d 			 leay middle,s
+X0280 31 c8 2d 			 leay middle,u
+X0283 31 88 2d 			 leay middle,x
+X0286 31 a8 2d 			 leay middle,y
+X0289 31 8d 34 52 		 leay *+3456h,pcr
+X028d 31 8c 64 			 leay *+67h,pcr
+X0290 31 7b 			 leay short,s
+X0292 31 5b 			 leay short,u
+X0294 31 1b 			 leay short,x
+X0296 31 3b 			 leay short,y
+X0298 68 a4 			 lsl ,y
+X029a 08 55 			 lsl direct
+X029c 78 65 43 			 lsl extend
+X029f 48 			 lsla
+X02a0 58 			 lslb
+X02a1 64 a4 			 lsr ,y
+X02a3 04 55 			 lsr direct
+X02a5 74 65 43 			 lsr extend
+X02a8 44 			 lsra
+X02a9 54 			 lsrb
+X02aa 3d 			 mul
+X02ab 60 a4 			 neg ,y
+X02ad 00 55 			 neg direct
+X02af 70 65 43 			 neg extend
+X02b2 40 			 nega
+X02b3 50 			 negb
+X02b4 12 			 nop
+X02b5 8a 99 			 ora # stuff
+X02b7 aa a4 			 ora ,y
+X02b9 9a 55 			 ora direct
+X02bb ba 65 43 			 ora extended
+X02be ca 99 			 orb # stuff
+X02c0 ea a4 			 orb ,y
+X02c2 da 55 			 orb direct
+X02c4 fa 65 43 			 orb extended
+X02c7 1a 99 			 orcc # stuff
+X02c9 34 17 			 pshs a,b,cc,x
+X02cb 36 17 			 pshu a,b,cc,x
+X02cd 35 17 			 puls a,b,cc,x
+X02cf 37 17 			 pulu a,b,cc,x
+X02d1 69 a4 			 rol ,y
+X02d3 09 55 			 rol direct
+X02d5 79 65 43 			 rol extend
+X02d8 49 			 rola
+X02d9 59 			 rolb
+X02da 66 a4 			 ror ,y
+X02dc 06 55 			 ror direct
+X02de 76 65 43 			 ror extend
+X02e1 46 			 rora
+X02e2 56 			 rorb
+X02e3 3b 			 rti
+X02e4 39 			 rts
+X02e5 82 99 			 sbca # stuff
+X02e7 a2 a4 			 sbca ,y
+X02e9 92 55 			 sbca direct
+X02eb b2 65 43 			 sbca extended
+X02ee c2 99 			 sbcb # stuff
+X02f0 e2 a4 			 sbcb ,y
+X02f2 d2 55 			 sbcb direct
+X02f4 f2 65 43 			 sbcb extended
+X02f7 1d 			 sex
+X02f8 a7 a4 			 sta ,y
+X02fa 97 55 			 sta direct
+X02fc b7 65 43 			 sta extended
+X02ff e7 a4 			 stb ,y
+X0301 d7 55 			 stb direct
+X0303 f7 65 43 			 stb extended
+X0306 ed a4 			 std ,y
+X0308 dd 55 			 std direct
+X030a fd 65 43 			 std extended
+X030d 10 ef a4 			 sts ,y
+X0310 10 df 55 			 sts direct
+X0313 10 ff 65 43 		 sts extended
+X0317 ef a4 			 stu ,y
+X0319 df 55 			 stu direct
+X031b ff 65 43 			 stu extended
+X031e af a4 			 stx ,y
+X0320 9f 55 			 stx direct
+X0322 bf 65 43 			 stx extended
+X0325 10 af a4 			 sty ,y
+X0328 10 9f 55 			 sty direct
+X032b 10 bf 65 43 		 sty extended
+X032f 80 99 			 suba # stuff
+X0331 a0 a4 			 suba ,y
+X0333 90 55 			 suba direct
+X0335 b0 65 43 			 suba extended
+X0338 c0 99 			 subb # stuff
+X033a e0 a4 			 subb ,y
+X033c d0 55 			 subb direct
+X033e f0 65 43 			 subb extended
+X0341 83 00 99 			 subd # stuff
+X0344 a3 a4 			 subd ,y
+X0346 93 55 			 subd direct
+X0348 b3 65 43 			 subd extended
+X034b 3f 			 swi
+X034c 10 3f 			 swi2
+X034e 11 3f 			 swi3
+X0350 13 			 sync
+X0351 1f 89 			 tfr a,b
+X0353 1f 45 			 tfr s,pc
+X0355 1f 12 			 tfr x,y
+X0357 6d a4 			 tst ,y
+X0359 0d 55 			 tst direct
+X035b 7d 65 43 			 tst extend
+X035e 4d 			 tsta
+X035f 5d 			 tstb
+X ERROR SUMMARY - ERRORS DETECTED 0
+X               -  WARNINGS       0
+SHAR_EOF
+true || echo 'restore of as6809.tut failed'
+fi
+true || echo 'restore of as6809.y failed'
+echo End of part 1, continue with part 2
+exit 0
