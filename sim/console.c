@@ -36,6 +36,8 @@ static long int Cycles = 0;
 
 static int Activate_console = 0;
 static int Console_active = 0;
+static int Go_flag = 0;
+static int Quit_flag = 0;
 
 static void sigbrkhandler(int sigtype)
 {
@@ -248,14 +250,21 @@ void console_command()
   for(;;) {
     Activate_console = 0;
     Console_active = 1;
-    printf("> ");
-    fflush(stdout);
-    if(fgets(input, 80, stdin) == 0)
-      return;
-    if (strlen(input) == 1)
-      strptr = copy;
-    else
-      strptr = strcpy(copy, input);
+    if (Go_flag) {
+      strptr = "g\n";
+      Go_flag = 0;
+    }
+    else {
+      printf("> ");
+      fflush(stdout);
+
+      if (fgets(input, 80, stdin) == 0)
+        return;
+      if (strlen(input) == 1)
+        strptr = copy;
+      else
+        strptr = strcpy(copy, input);
+    }
     
     switch (next_char(&strptr)) {
     case 'c' :
@@ -301,6 +310,9 @@ void console_command()
         dis6809(rpc, stdout);
       }
       memadr = rpc;
+      if (Quit_flag)
+        return;
+
       break;
     case 'h' : case '?' :
       printf("     HELP for the 6809 simulator debugger\n\n");
@@ -427,18 +439,32 @@ void console_command()
 static tt_u16 parse_cmdline(int argc, char **argv)
 {
   tt_u16 start_addr = 0;
-  
-  if (--argc == 0)
-    return start_addr;
+  int i;
 
-  if (!strcmp(argv[1], "-h")) {
-    printf("%s: [file [...]]\n", argv[0]);
-    exit(0);
+  for (i = 1; i < argc; i++) {
+    if (argv[i][0] == '-') {
+      switch (argv[i][1]) {
+      case 'g':
+      case 'G':
+        Go_flag = 1;
+        break;
+      case 'q':
+      case 'Q':
+        Quit_flag = 1;
+        break;
+      case 'h':
+      case 'H':
+      default:
+        printf("%s: [-g] [-q] [file [...]]\n", argv[0]);
+        exit(0);
+        break;
+      }
+    }
+    else {
+      start_addr = load_intelhex(argv[i]);
+    }
   }
 
-  while (argc-- > 0)
-    start_addr = load_intelhex(*++argv);
-  
   return start_addr;
 }
 
