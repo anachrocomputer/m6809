@@ -38,7 +38,7 @@ inst6809.o: inst6809.c config.h emu6809.h
 
 int6809.o: int6809.c config.h emu6809.h
 
-memory.o: memory.c config.h console.h
+memory.o: memory.c config.h emu6809.h
 
 misc.o: misc.c config.h emu6809.h
 

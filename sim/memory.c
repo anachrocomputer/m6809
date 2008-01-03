@@ -21,7 +21,6 @@
 
 #include "config.h"
 #include "emu6809.h"
-#include "console.h"
 
 static tt_u8 *Ramdata;    /* 64 kb of ram */
 

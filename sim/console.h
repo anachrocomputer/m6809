@@ -16,6 +16,4 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
 
-
-extern int activate_console;
-extern int debugio;
+extern int debugio;   /* Presently unused */
