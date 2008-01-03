@@ -32,15 +32,15 @@
 #include "emu6809.h"
 #include "console.h"
 
-long cycles = 0;
+static long int Cycles = 0;
 
-static int activate_console = 0;
-static int console_active = 0;
+static int Activate_console = 0;
+static int Console_active = 0;
 
 static void sigbrkhandler(int sigtype)
 {
-  if (!console_active)
-    activate_console = 1;
+  if (!Console_active)
+    Activate_console = 1;
 }
 
 static void setup_brkhandler(void)
@@ -130,19 +130,19 @@ int execute()
   int r = 0;
 
   do {
-    while ((n = m6809_execute()) > 0 && !activate_console)
-      cycles += n;
+    while ((n = m6809_execute()) > 0 && !Activate_console)
+      Cycles += n;
 
-    if (activate_console && n > 0)
-      cycles += n;
+    if (Activate_console && n > 0)
+      Cycles += n;
     
     if (n == SYSTEM_CALL)
-      r = activate_console = m6809_system();
+      r = Activate_console = m6809_system();
     else if (n < 0) {
       printf("m6809 run time error, return code %d\n", n);
-      activate_console = r = 1;
+      Activate_console = r = 1;
     }
-  } while (!activate_console);
+  } while (!Activate_console);
 
   return r;
 }
@@ -151,15 +151,15 @@ void execute_addr(tt_u16 addr)
 {
   int n;
 
-  while (!activate_console && rpc != addr) {
-    while ((n = m6809_execute()) > 0 && !activate_console && rpc != addr)
-      cycles += n;
+  while (!Activate_console && rpc != addr) {
+    while ((n = m6809_execute()) > 0 && !Activate_console && rpc != addr)
+      Cycles += n;
     
     if (n == SYSTEM_CALL)
-      activate_console = m6809_system();
+      Activate_console = m6809_system();
     else if (n < 0) {
       printf("m6809 run time error, return code %d\n", n);
-      activate_console = 1;
+      Activate_console = 1;
     }
   }
 }
@@ -246,8 +246,8 @@ void console_command()
   int regon = 0;
 
   for(;;) {
-    activate_console = 0;
-    console_active = 1;
+    Activate_console = 0;
+    Console_active = 1;
     printf("> ");
     fflush(stdout);
     if(fgets(input, 80, stdin) == 0)
@@ -279,7 +279,7 @@ void console_command()
       break;
     case 'f' :
       if (more_params(&strptr)) {
-	console_active = 0;
+	Console_active = 0;
 	execute_addr(readhex(&strptr));
 	if (regon) {
 	  m6809_dumpregs();
@@ -293,7 +293,7 @@ void console_command()
     case 'g' :
       if (more_params(&strptr))
 	rpc = readhex(&strptr);
-      console_active = 0;
+      Console_active = 0;
       execute();
       if (regon) {
 	m6809_dumpregs();
@@ -362,7 +362,7 @@ void console_command()
 	i = 1;
 
       while (i-- > 0) {
-	activate_console = 1;
+	Activate_console = 1;
 	if (!execute()) {
 	  printf("Next PC: ");
 	  memadr = rpc + dis6809(rpc, stdout);
@@ -405,14 +405,14 @@ void console_command()
     case 'y' :
       if (more_params(&strptr))
 	if(readint(&strptr) == 0) {
-	  cycles = 0;
+	  Cycles = 0;
 	  printf("Cycle counter initialized\n");
 	} else
 	  printf("Syntax Error. Type 'h' to show help.\n");
       else {
-	double sec = (double)cycles / 1000000.0;
+	double sec = (double)Cycles / 1000000.0;
 
-	printf("Cycle counter: %ld\nEstimated time at 1 Mhz : %g seconds\n", cycles, sec);
+	printf("Cycle counter: %ld\nEstimated time at 1 Mhz : %g seconds\n", Cycles, sec);
       }
       break;
     default :
