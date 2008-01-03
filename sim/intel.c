@@ -20,11 +20,15 @@
 #include "config.h"
 #include "emu6809.h"
 
+/* These macros will only work if the compiler keeps the two calls
+ * to 'xdigitconv' in the same order.  If it reverses them, as an
+ * optimisation, the code will fail.
+ */
 #define READC (*(*ptr)++)
 #define GETB (xdigitconv(READC) * 16 + xdigitconv(READC))
 
-static char linebuf[80];
-static unsigned char checksum;
+static char Linebuf[80];
+static unsigned char Checksum;
 
 static int xdigitconv(char c)
 {
@@ -40,7 +44,7 @@ static unsigned char read_byte(char **ptr)
 {
   unsigned char val = GETB;
 
-  checksum += val;
+  Checksum += val;
   return val;
 }
 
@@ -49,15 +53,15 @@ static unsigned int read_word(char **ptr)
   unsigned int val1 = GETB;
   unsigned int val2 = GETB;
 
-  checksum += val1;
-  checksum += val2;
+  Checksum += val1;
+  Checksum += val2;
 
   return val1 * 256 + val2;
 }
 
 static int read_line(tt_u16 *start)
 {
-  char *strptr = linebuf;
+  char *strptr = Linebuf;
   int len, i;
   tt_u16 addr;
   unsigned char type;
@@ -67,7 +71,7 @@ static int read_line(tt_u16 *start)
     return 1;
   }
 
-  checksum = 0;
+  Checksum = 0;
 
   len = read_byte(&strptr);
   addr = read_word(&strptr);
@@ -78,7 +82,7 @@ static int read_line(tt_u16 *start)
 
   read_byte(&strptr);
 
-  if (checksum != 0) {
+  if (Checksum != 0) {
     fprintf(stderr, "Bad checksum\n");
     return 1;
   }
@@ -104,7 +108,7 @@ tt_u16 load_intelhex(const char *filename)
     return start_addr;
   }
 
-  while (fgets(linebuf, 80, fp) != NULL && !end)
+  while (fgets(Linebuf, 80, fp) != NULL && !end)
     end = read_line(&start_addr);
 
   fclose(fp);
