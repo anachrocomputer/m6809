@@ -20,7 +20,6 @@
 #include "config.h"
 #include "emu6809.h"
 
-static const char ccbits[] = "EFHINZVC";
 
 char hexdigit(tt_u16 v)
 {
@@ -74,6 +73,7 @@ char *bin8str(tt_u8 val)
 
 char *ccstr(tt_u8 val)
 {
+  static const char ccbits[] = "EFHINZVC";
   static char tempbuf[9] = "        ";
   int i;
 
