@@ -53,7 +53,6 @@ int readint(char **c);
 int more_params(char **c);
 char next_char(char **c);
 void console_command(void);
-void parse_cmdline(int argc, char **argv);
 int main(int argc, char **argv);
 
 /* dis6809.c */
@@ -243,4 +242,4 @@ char *ccstr(tt_u8 val);
 void *mmalloc(size_t n);
 
 /* intel.c */
-void load_intelhex(char *filename);
+tt_u16 load_intelhex(const char *filename);
