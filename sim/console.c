@@ -323,8 +323,10 @@ void console_command()
       printf("   y [0]           : show number of 6809 cycles [or set it to 0]\n");
       break;
     case 'l' :
-      if (more_params(&strptr))
-	load_intelhex(readstr(&strptr));
+      if (more_params(&strptr)) {
+	rpc = load_intelhex(readstr(&strptr));
+	printf("Start address is %04x\n", rpc);
+      }
       else
 	printf("Syntax Error. Type 'h' to show help.\n");
       break;
@@ -422,26 +424,38 @@ void console_command()
   }
 }
 
-void parse_cmdline(int argc, char **argv)
+static tt_u16 parse_cmdline(int argc, char **argv)
 {
+  tt_u16 start_addr = 0;
+  
   if (--argc == 0)
-    return;
+    return start_addr;
+
   if (!strcmp(argv[1], "-h")) {
     printf("%s: [file [...]]\n", argv[0]);
     exit(0);
   }
+
   while (argc-- > 0)
-    load_intelhex(*++argv);
+    start_addr = load_intelhex(*++argv);
+  
+  return start_addr;
 }
 
 int main(int argc, char **argv)
 {
+  tt_u16 start_addr;
+  
   if (!memory_init())
     return 1;
-  parse_cmdline(argc, argv);
+
+  start_addr = parse_cmdline(argc, argv);
   console_init();
   m6809_init();
   setup_brkhandler();
+  
+  rpc = start_addr;
+  
   console_command();
 
   return 0;

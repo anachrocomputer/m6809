@@ -54,8 +54,8 @@ static unsigned int read_word(char **ptr)
 
   return val1 * 256 + val2;
 }
-						 
-static int read_line(void)
+
+static int read_line(tt_u16 *start)
 {
   char *strptr = linebuf;
   int len, i;
@@ -63,7 +63,7 @@ static int read_line(void)
   unsigned char type;
 
   if (*strptr++ != ':') {
-    printf("Bad record\n");
+    fprintf(stderr, "Bad record\n");
     return 1;
   }
 
@@ -79,30 +79,35 @@ static int read_line(void)
   read_byte(&strptr);
 
   if (checksum != 0) {
-    printf("Bad checksum\n");
+    fprintf(stderr, "Bad checksum\n");
     return 1;
   }
 
-  if (type == 1)
+  if (type == 1) {
+    *start = addr;  /* Return starting address, as read from EOF record */
     return 1;
+  }
   else
     return 0;
 }
 
-void load_intelhex(char *filename)
+tt_u16 load_intelhex(const char *filename)
 {
   FILE *fp;
+  tt_u16 start_addr = 0;
   int end = 0;
 
   fp = fopen(filename, "r");
 
   if (!fp) {
-    printf("Could not open file %s\n", filename);
-    return;
+    fprintf(stderr, "Could not open file %s\n", filename);
+    return start_addr;
   }
 
   while (fgets(linebuf, 80, fp) != NULL && !end)
-    end = read_line();
+    end = read_line(&start_addr);
 
+  fclose(fp);
+  
+  return start_addr;
 }
-
