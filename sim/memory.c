@@ -23,18 +23,18 @@
 #include "emu6809.h"
 #include "console.h"
 
-tt_u8 *ramdata;    /* 64 kb of ram */
+static tt_u8 *Ramdata;    /* 64 kb of ram */
 
 int memory_init(void)
 {
-  ramdata = (tt_u8 *)mmalloc(0x10000);
+  Ramdata = (tt_u8 *)mmalloc(0x10000);
 
   return 1;
 }
 
 tt_u8 get_memb(tt_u16 adr)
 {
-  return ramdata[adr];
+  return Ramdata[adr];
 }
 
 tt_u16 get_memw(tt_u16 adr)
@@ -44,7 +44,7 @@ tt_u16 get_memw(tt_u16 adr)
 
 void set_memb(tt_u16 adr, tt_u8 val)
 {
-    ramdata[adr] = val;
+    Ramdata[adr] = val;
 }
 
 void set_memw(tt_u16 adr, tt_u16 val)
