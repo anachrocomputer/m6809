@@ -868,3 +868,5 @@ line70          fdb     0
 
 varA            rmb     4
 varB            rmb     4
+
+reset           end
