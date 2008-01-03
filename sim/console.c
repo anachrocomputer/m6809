@@ -269,11 +269,13 @@ void console_command()
     
     switch (next_char(&strptr)) {
     case 'c' :
+    case 'C' :
       for (n = 0; n < 0x10000; n++)
         set_memb((tt_u16)n, 0);
       printf("Memory cleared\n");
       break;
     case 'd' :
+    case 'D' :
       if (more_params(&strptr)) {
         start = readhex(&strptr);
         if (more_params(&strptr))
@@ -288,6 +290,7 @@ void console_command()
       memadr = (tt_u16)n;
       break;
     case 'f' :
+    case 'F' :
       if (more_params(&strptr)) {
         Console_active = 0;
         execute_addr(readhex(&strptr));
@@ -301,6 +304,7 @@ void console_command()
         printf("Syntax Error. Type 'h' to show help.\n");
       break;
     case 'g' :
+    case 'G' :
       if (more_params(&strptr))
         rpc = readhex(&strptr);
       Console_active = 0;
@@ -315,7 +319,9 @@ void console_command()
         return;
 
       break;
-    case 'h' : case '?' :
+    case 'h' :
+    case 'H' :
+    case '?' :
       printf("     HELP for the 6809 simulator debugger\n\n");
       printf("   c               : clear memory\n");
       printf("   d [start] [end] : disassemble memory from <start> to <end>\n");
@@ -334,8 +340,10 @@ void console_command()
 #endif
       printf("   u               : toggle dump registers\n");
       printf("   y [0]           : show number of 6809 cycles [or set it to 0]\n");
+      printf("   <return>        : repeat previous command\n");
       break;
     case 'l' :
+    case 'L' :
       if (more_params(&strptr)) {
         rpc = load_intelhex(readstr(&strptr));
         printf("Start address is %04x\n", rpc);
@@ -344,6 +352,7 @@ void console_command()
         printf("Syntax Error. Type 'h' to show help.\n");
       break;
     case 'm' :
+    case 'M' :
       if (more_params(&strptr)) {
         n = readhex(&strptr);
         if (more_params(&strptr))
@@ -371,6 +380,7 @@ void console_command()
       memadr = n;
       break;
     case 'n' :
+    case 'N' :
       if (more_params(&strptr))
         i = readint(&strptr);
       else
@@ -388,18 +398,22 @@ void console_command()
       }
       break;
     case 'p' :
+    case 'P' :
       if(more_params(&strptr))
         rpc = readhex(&strptr);
       else
         printf("Syntax Error. Type 'h' to show help.\n");
       break;
     case 'q' :
+    case 'Q' :
       return;
     case 'r' :
+    case 'R' :
       m6809_dumpregs();
       break;
 #ifdef PC_HISTORY
     case 's' :
+    case 'S' :
       r = pchistidx - pchistnbr;
       if (r < 0)
         r += PC_HISTORY_SIZE;
@@ -410,14 +424,17 @@ void console_command()
       }
       break;
     case 't' :
+    case 'T' :
       pchistnbr = pchistidx = 0;
       break;
 #endif
     case 'u' :
+    case 'U' :
       regon ^= 1;
       printf("Dump registers %s\n", regon ? "on" : "off");
       break;
     case 'y' :
+    case 'Y' :
       if (more_params(&strptr))
         if(readint(&strptr) == 0) {
           Cycles = 0;
