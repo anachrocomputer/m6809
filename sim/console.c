@@ -98,11 +98,13 @@ int m6809_system(void)
     rti();
     return 0;
   case 3:
-    tcgetattr (STDIN, &orig_tty);
-    tcgetattr (STDIN, &new_tty);
-    cfmakeraw (&new_tty);
-    tcsetattr (STDIN, TCSAFLUSH, &new_tty);
-    cbrk = 1;
+    if (isatty(STDIN)) {
+      tcgetattr (STDIN, &orig_tty);
+      tcgetattr (STDIN, &new_tty);
+      cfmakeraw (&new_tty);
+      tcsetattr (STDIN, TCSAFLUSH, &new_tty);
+      cbrk = 1;
+    }
     rti();
     return 0;
   case 4:
@@ -118,7 +120,7 @@ int m6809_system(void)
     rti();
     return 0;
   case 6:
-    if (read (STDIN, input, 1) == -1) {
+    if (read (STDIN, input, 1) <= 0) {
       rti();
       return 1;
     }
