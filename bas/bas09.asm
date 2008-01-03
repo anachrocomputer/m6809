@@ -330,6 +330,8 @@ getlin          pshs    b,x               ; Save B and X
 get0            jsr     t1in              ; Get a character
                 cmpa    #cr               ; Check for CR
                 beq     get1
+                cmpa    #lf               ; Check for LF
+                beq     get1
                 cmpa    #bs               ; Check for BS
                 beq     get2
                 cmpa    #del              ; Check for DEL
