@@ -238,7 +238,8 @@ char next_char(char **c)
   
 void console_command()
 {
-  static char input[80], copy[80];
+  static char input[80];
+  static char copy[80] = "h\n";
   char *strptr;
   tt_u16 memadr = 0;
   tt_u16 start = 0;
