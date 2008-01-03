@@ -38,6 +38,7 @@ static int Activate_console = 0;
 static int Console_active = 0;
 static int Go_flag = 0;
 static int Quit_flag = 0;
+static int Quiet_flag = 0;
 
 static void sigbrkhandler(int sigtype)
 {
@@ -52,7 +53,11 @@ static void setup_brkhandler(void)
 
 void console_init(void)
 {
-  printf("sim6809 v0.1 - 6809 simulator\nCopyright (c) 1998 by Jerome Thoen\n\n");
+  if (Quiet_flag == 0) {
+    printf("sim6809 v0.1 - 6809 simulator\n");
+    printf("Copyright (c) 1998 by Jerome Thoen\n");
+    printf("\n");  
+  }
 }
 
 int m6809_system(void) 
@@ -66,7 +71,9 @@ int m6809_system(void)
 
   switch (ra) {
   case 0 :
-    printf("Program terminated\n");
+    if (Quiet_flag == 0)
+      printf("6809 program terminated\n");
+
     rti();
     return 1;
   case 1 :
@@ -120,7 +127,7 @@ int m6809_system(void)
     rti();
     return 0;
   default :
-    printf("Unknown system call %d\n", ra);
+    fprintf(stderr, "Unknown system call %d\n", ra);
     rti();
     return 0;
   }
@@ -141,7 +148,7 @@ int execute()
     if (n == SYSTEM_CALL)
       r = Activate_console = m6809_system();
     else if (n < 0) {
-      printf("m6809 run time error, return code %d\n", n);
+      fprintf(stderr, "m6809 run time error, return code %d\n", n);
       Activate_console = r = 1;
     }
   } while (!Activate_console);
@@ -160,7 +167,7 @@ void execute_addr(tt_u16 addr)
     if (n == SYSTEM_CALL)
       Activate_console = m6809_system();
     else if (n < 0) {
-      printf("m6809 run time error, return code %d\n", n);
+      fprintf(stderr, "m6809 run time error, return code %d\n", n);
       Activate_console = 1;
     }
   }
@@ -272,7 +279,7 @@ void console_command()
     case 'C' :
       for (n = 0; n < 0x10000; n++)
         set_memb((tt_u16)n, 0);
-      printf("Memory cleared\n");
+      printf("6809 memory cleared\n");
       break;
     case 'd' :
     case 'D' :
@@ -431,7 +438,7 @@ void console_command()
     case 'u' :
     case 'U' :
       regon ^= 1;
-      printf("Dump registers %s\n", regon ? "on" : "off");
+      printf("Dump 6809 registers %s\n", regon ? "on" : "off");
       break;
     case 'y' :
     case 'Y' :
@@ -470,10 +477,14 @@ static tt_u16 parse_cmdline(int argc, char **argv)
       case 'Q':
         Quit_flag = 1;
         break;
+      case 'n':  
+      case 'N':
+        Quiet_flag = 1;
+        break;
       case 'h':
       case 'H':
       default:
-        printf("%s: [-g] [-q] [file [...]]\n", argv[0]);
+        printf("%s: [-g] [-q] [-n] [file [...]]\n", argv[0]);
         exit(0);
         break;
       }
