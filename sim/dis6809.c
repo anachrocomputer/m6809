@@ -22,13 +22,13 @@
 #include "emu6809.h"
 
 /*
-	modes:
-	1 immediate
-	2 direct    
-	3 indexed   
-	4 extended  
-	5 inherent
-	6 relative
+        modes:
+        1 immediate
+        2 direct    
+        3 indexed   
+        4 extended  
+        5 inherent
+        6 relative
 */
 
 static const int mode[] = {
@@ -188,7 +188,7 @@ SUBBCMPBSBCBADDDANDBBITBLDB STB EORBADCBORB ADDBLDD STD LDU STU \
 static const char regi[] = { 'X', 'Y', 'U', 'S' };
 
 static const char *exgi[] = { "D", "X", "Y", "U", "S", "PC", "??", "??", "A",
-			      "B", "CC", "DP", "??", "??", "??", "??" };
+                              "B", "CC", "DP", "??", "??", "??", "??" };
 
 static const char *pshsregi[] = { "PC", "U", "Y", "X", "DP", "B", "A", "CC" };
 static const char *pshuregi[] = { "PC", "S", "Y", "X", "DP", "B", "A", "CC" };
@@ -235,63 +235,63 @@ int dis6809(tt_u16 adr, FILE *stream)
 
     if (!(pb & 0x80)) {       /* n4,R */
       if (pb & 0x10)
-	fprintf(stream, "-$%s,%c", hex8str(((pb & 0x0f) ^ 0x0f) + 1), reg);
+        fprintf(stream, "-$%s,%c", hex8str(((pb & 0x0f) ^ 0x0f) + 1), reg);
       else
-	fprintf(stream, "$%s,%c", hex8str(pb & 0x0f), reg);
+        fprintf(stream, "$%s,%c", hex8str(pb & 0x0f), reg);
     }
     else {
       if (pb & 0x10)
-	fputc('[', stream);
+        fputc('[', stream);
       switch (pb & 0x0f) {
       case 0:                 /* ,R+ */
-	fprintf(stream, ",%c+", reg);
-	break;
+        fprintf(stream, ",%c+", reg);
+        break;
       case 1:                 /* ,R++ */
-	fprintf(stream, ",%c++", reg);
-	break;
+        fprintf(stream, ",%c++", reg);
+        break;
       case 2:                 /* ,-R */
-	fprintf(stream, ",-%c", reg);
-	break;
+        fprintf(stream, ",-%c", reg);
+        break;
       case 3:                 /* ,--R */
-	fprintf(stream, ",--%c", reg);
-	break;
+        fprintf(stream, ",--%c", reg);
+        break;
       case 4:                 /* ,R */
-	fprintf(stream, ",%c", reg);
-	break;
+        fprintf(stream, ",%c", reg);
+        break;
       case 5:                 /* B,R */
-	fprintf(stream, "B,%c", reg);
-	break;
+        fprintf(stream, "B,%c", reg);
+        break;
       case 6:                 /* A,R */
-	fprintf(stream, "A,%c", reg);
-	break;
+        fprintf(stream, "A,%c", reg);
+        break;
       case 8:                 /* n7,R */
-	s += 1;
-	fprintf(stream, "<$%s,%c", hex8str(get_memb(adr + s - 1)), reg);
-	break;
+        s += 1;
+        fprintf(stream, "<$%s,%c", hex8str(get_memb(adr + s - 1)), reg);
+        break;
       case 9:                 /* n15,R */
-	s += 2;
-	fprintf(stream, ">$%s,%c", hex16str(get_memw(adr + s - 2)), reg);
-	break;
+        s += 2;
+        fprintf(stream, ">$%s,%c", hex16str(get_memw(adr + s - 2)), reg);
+        break;
       case 11:                /* D,R */
-	fprintf(stream, "D,%c", reg);
-	break;
+        fprintf(stream, "D,%c", reg);
+        break;
       case 12:                /* n7,PCR */
-	s += 1;
-	fprintf(stream, "<$%s,PCR", hex8str(get_memb(adr + s - 1)));
-	break;
+        s += 1;
+        fprintf(stream, "<$%s,PCR", hex8str(get_memb(adr + s - 1)));
+        break;
       case 13:                /* n15,PCR */
-	s += 2;
-	fprintf(stream, ">$%s,PCR", hex16str(get_memw(adr + s - 2)));
-	break;
+        s += 2;
+        fprintf(stream, ">$%s,PCR", hex16str(get_memw(adr + s - 2)));
+        break;
       case 15:                /* [n] */
-	s += 2;
-	fprintf(stream, "$%s", hex16str(get_memw(adr + s - 2)));
-	break;
+        s += 2;
+        fprintf(stream, "$%s", hex16str(get_memw(adr + s - 2)));
+        break;
       default:
-	fputs("??", stream);
-	break; }
+        fputs("??", stream);
+        break; }
       if (pb & 0x10)
-	fputc(']', stream);
+        fputc(']', stream);
     }
     break;
   case 4:          /* extended */
@@ -308,62 +308,62 @@ int dis6809(tt_u16 adr, FILE *stream)
       break;
     case 0x34:                         /* pshs */
       {
-	int p = 0;
+        int p = 0;
 
-	for (i = 0; i < 8; i++) {
-	  if (pb & 0x80) {
-	    if (p)
-	      fputc(',', stream);
-	    fputs(pshsregi[i], stream);
-	    p = 1;
-	  }
-	  pb <<= 1;
-	}
+        for (i = 0; i < 8; i++) {
+          if (pb & 0x80) {
+            if (p)
+              fputc(',', stream);
+            fputs(pshsregi[i], stream);
+            p = 1;
+          }
+          pb <<= 1;
+        }
       }
       break;
     case 0x35:                         /* puls */
       {
-	int p = 0;
+        int p = 0;
 
-	for (i = 7; i >= 0; i--) {
-	  if (pb & 0x01) {
-	    if (p)
-	      fputc(',', stream);
-	    fputs(pshsregi[i], stream);
-	    p = 1;
-	  }
-	  pb >>= 1;
-	}
+        for (i = 7; i >= 0; i--) {
+          if (pb & 0x01) {
+            if (p)
+              fputc(',', stream);
+            fputs(pshsregi[i], stream);
+            p = 1;
+          }
+          pb >>= 1;
+        }
       }
       break;
     case 0x36:                         /* pshu */
       {
-	int p = 0;
+        int p = 0;
 
-	for (i = 0; i < 8; i++) {
-	  if (pb & 0x80) {
-	    if (p)
-	      fputc(',', stream);
-	    fputs(pshuregi[i], stream);
-	    p = 1;
-	  }
-	  pb <<= 1;
-	}
+        for (i = 0; i < 8; i++) {
+          if (pb & 0x80) {
+            if (p)
+              fputc(',', stream);
+            fputs(pshuregi[i], stream);
+            p = 1;
+          }
+          pb <<= 1;
+        }
       }
       break;
     case 0x37:                         /* pulu */
       {
-	int p = 0;
+        int p = 0;
 
-	for (i = 7; i >= 0; i--) {
-	  if (pb & 0x01) {
-	    if (p)
-	      fputc(',', stream);
-	    fputs(pshuregi[i], stream);
-	    p = 1;
-	  }
-	  pb >>= 1;
-	}
+        for (i = 7; i >= 0; i--) {
+          if (pb & 0x01) {
+            if (p)
+              fputc(',', stream);
+            fputs(pshuregi[i], stream);
+            p = 1;
+          }
+          pb >>= 1;
+        }
       }
       break;
     }
@@ -373,9 +373,9 @@ int dis6809(tt_u16 adr, FILE *stream)
       tt_s16 v;
 
       if (s == 2)
-	v = (tt_s16)(tt_s8)get_memb(adr + 1);
+        v = (tt_s16)(tt_s8)get_memb(adr + 1);
       else
-	v = (tt_s16)get_memw(adr + s - 2);
+        v = (tt_s16)get_memw(adr + s - 2);
       fprintf(stream, ">$%s", hex16str(adr + (tt_u16)s + v));
       break;
     }

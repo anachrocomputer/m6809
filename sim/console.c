@@ -77,13 +77,13 @@ int m6809_system(void)
     if (rb) {
       fflush(stdout);
       if (fgets(input, rb, stdin)) {
-	do {
-	  set_memb(rx++, *p);
-	  ra++;
-	} while (*p++);
-	ra--;
+        do {
+          set_memb(rx++, *p);
+          ra++;
+        } while (*p++);
+        ra--;
       } else
-	set_memb(rx, 0);
+        set_memb(rx, 0);
     }
     set_memb(rs + 1, ra);
     rti();
@@ -260,18 +260,18 @@ void console_command()
     switch (next_char(&strptr)) {
     case 'c' :
       for (n = 0; n < 0x10000; n++)
-	set_memb((tt_u16)n, 0);
+        set_memb((tt_u16)n, 0);
       printf("Memory cleared\n");
       break;
     case 'd' :
       if (more_params(&strptr)) {
-	start = readhex(&strptr);
-	if (more_params(&strptr))
-	  end = readhex(&strptr);
-	else
-	  end = start;
+        start = readhex(&strptr);
+        if (more_params(&strptr))
+          end = readhex(&strptr);
+        else
+          end = start;
       } else 
-	start = end = memadr;
+        start = end = memadr;
       
       for(n = start; n <= end && n < 0x10000; n += dis6809((tt_u16)n, stdout));
 
@@ -279,26 +279,26 @@ void console_command()
       break;
     case 'f' :
       if (more_params(&strptr)) {
-	Console_active = 0;
-	execute_addr(readhex(&strptr));
-	if (regon) {
-	  m6809_dumpregs();
-	  printf("Next PC: ");
-	  dis6809(rpc, stdout);
-	}
-	memadr = rpc;
+        Console_active = 0;
+        execute_addr(readhex(&strptr));
+        if (regon) {
+          m6809_dumpregs();
+          printf("Next PC: ");
+          dis6809(rpc, stdout);
+        }
+        memadr = rpc;
       } else
-	printf("Syntax Error. Type 'h' to show help.\n");
+        printf("Syntax Error. Type 'h' to show help.\n");
       break;
     case 'g' :
       if (more_params(&strptr))
-	rpc = readhex(&strptr);
+        rpc = readhex(&strptr);
       Console_active = 0;
       execute();
       if (regon) {
-	m6809_dumpregs();
-	printf("Next PC: ");
-	dis6809(rpc, stdout);
+        m6809_dumpregs();
+        printf("Next PC: ");
+        dis6809(rpc, stdout);
       }
       memadr = rpc;
       break;
@@ -324,61 +324,61 @@ void console_command()
       break;
     case 'l' :
       if (more_params(&strptr)) {
-	rpc = load_intelhex(readstr(&strptr));
-	printf("Start address is %04x\n", rpc);
+        rpc = load_intelhex(readstr(&strptr));
+        printf("Start address is %04x\n", rpc);
       }
       else
-	printf("Syntax Error. Type 'h' to show help.\n");
+        printf("Syntax Error. Type 'h' to show help.\n");
       break;
     case 'm' :
       if (more_params(&strptr)) {
-	n = readhex(&strptr);
-	if (more_params(&strptr))
-	  end = readhex(&strptr);
-	else
-	  end = n;
+        n = readhex(&strptr);
+        if (more_params(&strptr))
+          end = readhex(&strptr);
+        else
+          end = n;
       } else 
-	n = end = memadr;
+        n = end = memadr;
       while (n <= (long)end) {
-	printf("%04hX: ", (unsigned int)n);
-	for (i = 1; i <= 8; i++)
-	  printf("%02X ", get_memb(n++));
-	n -= 8;
-	for (i = 1; i <= 8; i++) {
-	  tt_u8 v;
+        printf("%04hX: ", (unsigned int)n);
+        for (i = 1; i <= 8; i++)
+          printf("%02X ", get_memb(n++));
+        n -= 8;
+        for (i = 1; i <= 8; i++) {
+          tt_u8 v;
 
-	  v = get_memb(n++);
-	  if (v >= 0x20 && v <= 0x7e)
-	    putchar(v);
-	  else
-	    putchar('.');
-	}
-	putchar('\n');
+          v = get_memb(n++);
+          if (v >= 0x20 && v <= 0x7e)
+            putchar(v);
+          else
+            putchar('.');
+        }
+        putchar('\n');
       }
       memadr = n;
       break;
     case 'n' :
       if (more_params(&strptr))
-	i = readint(&strptr);
+        i = readint(&strptr);
       else
-	i = 1;
+        i = 1;
 
       while (i-- > 0) {
-	Activate_console = 1;
-	if (!execute()) {
-	  printf("Next PC: ");
-	  memadr = rpc + dis6809(rpc, stdout);
-	  if (regon)
-	    m6809_dumpregs();
-	} else
-	  break;
+        Activate_console = 1;
+        if (!execute()) {
+          printf("Next PC: ");
+          memadr = rpc + dis6809(rpc, stdout);
+          if (regon)
+            m6809_dumpregs();
+        } else
+          break;
       }
       break;
     case 'p' :
       if(more_params(&strptr))
-	rpc = readhex(&strptr);
+        rpc = readhex(&strptr);
       else
-	printf("Syntax Error. Type 'h' to show help.\n");
+        printf("Syntax Error. Type 'h' to show help.\n");
       break;
     case 'q' :
       return;
@@ -389,11 +389,11 @@ void console_command()
     case 's' :
       r = pchistidx - pchistnbr;
       if (r < 0)
-	r += PC_HISTORY_SIZE;
+        r += PC_HISTORY_SIZE;
       for (i = 1; i <= pchistnbr; i++) {
-	dis6809(pchist[r++], stdout);
-	if (r == PC_HISTORY_SIZE)
-	  r = 0;
+        dis6809(pchist[r++], stdout);
+        if (r == PC_HISTORY_SIZE)
+          r = 0;
       }
       break;
     case 't' :
@@ -406,15 +406,15 @@ void console_command()
       break;
     case 'y' :
       if (more_params(&strptr))
-	if(readint(&strptr) == 0) {
-	  Cycles = 0;
-	  printf("Cycle counter initialized\n");
-	} else
-	  printf("Syntax Error. Type 'h' to show help.\n");
+        if(readint(&strptr) == 0) {
+          Cycles = 0;
+          printf("Cycle counter initialized\n");
+        } else
+          printf("Syntax Error. Type 'h' to show help.\n");
       else {
-	double sec = (double)Cycles / 1000000.0;
+        double sec = (double)Cycles / 1000000.0;
 
-	printf("Cycle counter: %ld\nEstimated time at 1 Mhz : %g seconds\n", Cycles, sec);
+        printf("Cycle counter: %ld\nEstimated time at 1 Mhz : %g seconds\n", Cycles, sec);
       }
       break;
     default :

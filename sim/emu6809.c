@@ -41,13 +41,13 @@ int pchistnbr = 0;
 #endif
  
 /*
-	modes:
-	1 immediate
-	2 direct    
-	3 indexed   
-	4 extended  
-	5 inherent
-	6 relative
+        modes:
+        1 immediate
+        2 direct    
+        3 indexed   
+        4 extended  
+        5 inherent
+        6 relative
 */
 
 int amod[] = {
