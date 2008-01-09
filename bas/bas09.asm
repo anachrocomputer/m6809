@@ -43,6 +43,10 @@ TON             equ     $97
                 org     $80
 cmdbuf          rmb     80
 decbuf          rmb     16
+progbase        fdb     line0             ; Base pointer for BASIC program
+progtop         fdb     fakeprogtop
+scalars         fdb     var0              ; Base pointer for scalar variables
+nscalar         fdb     3
 
                 org     $0100             ; Just above "zero-page"
 
@@ -72,7 +76,7 @@ cmdloop         lda     #80
 ;               jsr     prtmsg
 ;               jsr     crlf
                 clra                      ; Must be immediate command
-                ldb     #7                ; Number of keywords
+                ldb     #8                ; Number of keywords
                 ldu     #kwtab            ; Pointer to keyword table
 kwsrch          ldy     ,u++
                 jsr     strequc
@@ -97,12 +101,18 @@ lnumseen        jsr     atoi16u           ; Convert line number to binary
                 jsr     skipbl            ; Skip trailing blanks
                 lda     ,x
                 beq     delline           ; User wants to delete a line
-                ldx     #unsupmsg
+insline         nop
+                tfr     y,d               ; Get line number into D
+                ldx     #insmsg
                 jsr     prtmsg
+                jsr     prtdec16          ; Echo line number
+                jsr     crlf
                 bra     cmdloop
+
 lnumovf         ldx     #ovfmsg           ; Line number too big
                 jsr     prtmsg
                 bra     cmdloop
+
 delline         nop
                 tfr     y,d               ; Get line number back
                 ldx     #delmsg
@@ -116,40 +126,6 @@ exit            lda     #4                ; SIM Out of CBREAK mode
                 lda     #0                ; SIM Terminate
                 swi                       ; SIM
 here            jmp     here
-
-; LIST --- needs start/end line numbers
-LIST            ldx     #line0
-listln          cmpx    #0                ; End of list?
-                beq     listdn
-                lda     #'['              ; DB
-                jsr     t1ou              ; DB
-                tfr     x,d               ; DB
-                jsr     hex4ou            ; DB
-                lda     #']'              ; DB
-                jsr     t1ou              ; DB
-                ldd     ,x++              ; Read link to next line
-                tfr     d,u               ; Save pointer to next line
-                ldd     ,x++              ; Get line number
-                jsr     prtdec16          ; Print in decimal
-                jsr     space
-listch          lda     ,x+               ; Read first token of line
-                beq     listeol
-                bpl     listasc
-                anda    #$7F              ; Strip top bit
-                asla                      ; Double it
-                ldy     #listtab          ; Get address of call table
-                jsr     [a,y]             ; Call routine for this token
-                bra     listch            ; Go back for next byte
-listasc         cmpa    #SEP
-                beq     listsep
-                jsr     t1ou
-                bra     listch
-listsep         jsr     t1ou              ; Print statement separator
-                bra     listch
-listeol         jsr     crlf              ; End of BASIC line
-                tfr     u,x               ; Transfer saved pointer to X
-                bra     listln
-listdn          rts
 
 LLET            jsr     lrword
                 jsr     space
@@ -233,27 +209,116 @@ lrw1            lda     ,x+
                 bra     lrw1
 lrw2            puls    a,x,pc
                 
-; RUN --- needs start line number
-RUN             ldd     #50
-                jsr     findln
+; LIST --- needs start/end line numbers
+LIST            ldx     progbase
+listln          cmpx    #0                ; End of list?
+                beq     listdn
+                lda     #'['              ; DB
+                jsr     t1ou              ; DB
+                tfr     x,d               ; DB
+                jsr     hex4ou            ; DB
+                lda     #']'              ; DB
+                jsr     t1ou              ; DB
+                ldd     ,x++              ; Read link to next line
+                tfr     d,u               ; Save pointer to next line
+                ldd     ,x++              ; Get line number
+                jsr     prtdec16          ; Print in decimal
+                jsr     space
+listch          lda     ,x+               ; Read first token of line
+                beq     listeol
+                bpl     listasc
+                anda    #$7F              ; Strip top bit
+                asla                      ; Double it
+                ldy     #listtab          ; Get address of call table
+                jsr     [a,y]             ; Call routine for this token
+                bra     listch            ; Go back for next byte
+listasc         cmpa    #SEP
+                beq     listsep
+                jsr     t1ou
+                bra     listch
+listsep         jsr     t1ou              ; Print statement separator
+                bra     listch
+listeol         jsr     crlf              ; End of BASIC line
+                tfr     u,x               ; Transfer saved pointer to X
+                bra     listln
+listdn          rts
+
+; VLIST --- list variable names and values
+VLIST           ldx     nscalar           ; Load number of scalar variables
+                ldy     scalars           ; Load pointer to scalars
+vl1             cmpx    #0                ; Check for zero
+                beq     vlistdn
+                lda     ,y+               ; Get first char of variable name
+                jsr     t1ou              ; Print it
+                lda     ,y+               ; Get second char
+                bne     vl2
+                lda     #sp
+vl2             jsr     t1ou              ; Print second char or space
+                jsr     space
+                ldd     ,y++              ; Get variable value (hi)
+                jsr     hex4ou
+                ldd     ,y++              ; Get variable value (lo)
+                jsr     hex4ou
+                jsr     crlf
+                leax    -1,x              ; Decrement X
+                bra     vl1
+vlistdn         rts
+                
+; RUN --- execute program, from start or from given line
+RUN             bra     runfromstart      ; Temporary: until parser works
+                jsr     skipbl            ; Skip blanks
+                lda     ,x                ; Look for line number
+                beq     runfromstart
+                jsr     isdigit
+                beq     runline
+                ldx     #lnummsg
+                jsr     prtmsg
+                bra     rundn
+runline         jsr     atoi16u           ; Grab line number
+                bcs     runlnerr          ; Overflow?
+                tfr     d,y               ; Save in Y for now
+                jsr     skipbl            ; Skip trailing blanks
+                lda     ,x                ; Make sure we have EOL
+                bne     runsynerr         ; Syntax error
+                tfr     y,d               ; Recover saved line number
+                bra     dorun
+runfromstart    ldd     #50
+dorun           jsr     findln
                 tfr     x,d
                 jsr     hex4ou
                 jsr     crlf
-                rts
+rundn           rts
+runlnerr        ldx     #ovfmsg
+                jsr     prtmsg
+                bra     rundn
+runsynerr       ldx     #synmsg
+                jsr     prtmsg
+                bra     rundn
 
-; SYSTEM
-SYSTEM          jmp     exit              ; Doesn't clean up the stack
-
+; CONT --- continue execution after STOP or BREAK
 CONT            ldx     #contmsg
                 jsr     prtmsg
                 rts
-NEW             nop
+                
+; NEW --- delete all program lines
+NEW             ldx     #0
+                stx     progbase
+                stx     progtop
+                stx     scalars
+                stx     nscalar
                 rts
+                
+; LOAD --- load program from storage
 LOAD            ldx     #playmsg
                 jsr     prtmsg
                 rts
+                
+; SAVE --- save program to storage
 SAVE            nop
                 rts
+
+; SYSTEM --- exit from BASIC back to OS
+SYSTEM          jmp     exit              ; Doesn't clean up the stack
 
 ; FINDLN
 ; Entry: A=Line number
@@ -657,20 +722,22 @@ t1in            nop
                 rts
 
 kwtab           fdb     klist
+                fdb     kvlist
                 fdb     krun
-                fdb     ksystem
                 fdb     knew
                 fdb     kcont
                 fdb     kload
                 fdb     ksave
+                fdb     ksystem
                 
 cmdtab          fdb     LIST
+                fdb     VLIST
                 fdb     RUN
-                fdb     SYSTEM
                 fdb     NEW
                 fdb     CONT
                 fdb     LOAD
                 fdb     SAVE
+                fdb     SYSTEM
                 
 ; Table of routines for LIST
 listtab         fdb     LLET
@@ -726,9 +793,9 @@ rwordtab        fdb     klet
 
 klist           fcc     'LIST'
                 fcb     eos
-krun            fcc     'RUN'
+kvlist          fcc     'VLIST'
                 fcb     eos
-ksystem         fcc     'SYSTEM'
+krun            fcc     'RUN'
                 fcb     eos
 knew            fcc     'NEW'
                 fcb     eos
@@ -737,6 +804,8 @@ kcont           fcc     'CONT'
 kload           fcc     'LOAD'
                 fcb     eos
 ksave           fcc     'SAVE'
+                fcb     eos
+ksystem         fcc     'SYSTEM'
                 fcb     eos
 
 klet            fcc     'LET'
@@ -792,6 +861,10 @@ krem            fcc     'REM'
 ;                fcb     cr,lf,eos
 difmsg          fcc     'Mistake'
                 fcb     cr,lf,eos
+synmsg          fcc     'Syntax error'
+                fcb     cr,lf,eos
+lnummsg         fcc     'Line number expected'
+                fcb     cr,lf,eos
 unsupmsg        fcc     'That function is not yet supported'
                 fcb     cr,lf,eos
 ovfmsg          fcc     'Line number too big'
@@ -799,6 +872,8 @@ ovfmsg          fcc     'Line number too big'
 contmsg         fcc     'Cant continue'
                 fcb     cr,lf,eos
 delmsg          fcc     'Delete line: '
+                fcb     eos
+insmsg          fcc     'Insert line: '
                 fcb     eos
 playmsg         fcc     'Press play on tape'
                 fcb     cr,lf,eos
@@ -868,7 +943,20 @@ line70          fdb     0
                 fdb     line10
                 fcb     eol
 
-varA            rmb     4
-varB            rmb     4
+fakeprogtop     equ     *
+
+; The scalar variables, normally built by the pre-run module
+var0            fcb     'A'
+                fcb     0
+varA            fdb     0                 ; 42 decimal
+                fdb     42
+                fcb     'B'
+                fcb     0
+varB            fdb     1                 ; 65536 decimal
+                fdb     0
+                fcb     'X'
+                fcb     '1'
+varX1           fdb     $ffff             ; -1 decimal
+                fdb     $ffff
 
 reset           end
