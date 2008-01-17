@@ -15,6 +15,7 @@
 ; 15/03/2006 BJ  Changed reset message to reduce size of text in EPROM
 ; 15/03/2006 BJ  Altered VDU code to use jump table
 ; 23/03/2006 BJ  Added VDU test pattern
+; 17/01/2008 BJ  Fixed bug introduced by VDU jump table code
 
 eos             equ     $00
 nul             equ     $00
@@ -110,12 +111,12 @@ ctrlch          cmpa    #nul              ; Ignore NULs
                 beq     vdurtn
                 cmpa    #ctrl_g
                 bmi     notctrl           ; Wasn't a valid control character after all
+                pshs    a,y               ; Need to use A and Y so save 'em
                 suba    #ctrl_g           ; Subtract offset
                 asla                      ; Multiply by two
-                pshs    y                 ; Need to use Y so save it
                 ldy     #vctrltab         ; Load pointer to subroutine table
                 jsr     [a,y]             ; Call cursor motion subroutine
-                puls    y                 ; Restore Y
+                puls    a,y               ; Restore A and Y registers
                 bra     vdurtn            ; Back to main VDU routine
 
 vctrltab        fdb     vctrl_g
