@@ -1,0 +1,2 @@
+stty -F /dev/ttyS1 9600 clocal -crtscts
+tr a-z A-Z <$1.hex | tr \\012 \\015 >/dev/ttyS1
