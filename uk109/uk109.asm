@@ -323,11 +323,6 @@ crlf            pshs    a
 ; T1OU
 ; Entry: A=ASCII char to send to serial port
 ; Exit:  registers unchanged
-;t1ou            pshs    a,b               ; SIM Save A & B
-;                tfr     a,b               ; SIM
-;                lda     #5                ; SIM
-;                swi                       ; SIM
-;                puls    a,b,pc            ; SIM
 t1ou            pshs    a                 ; Save char in A
 t1ou1           lda     acias             ; Read ACIA status
                 anda    #$02              ; Transmit ready?
@@ -510,8 +505,6 @@ monitor         lda     #'>'              ; Monitor command-level prompt
                 jsr     vduchar
                 jsr     getchar           ; Read command letter from user
                 jsr     vduchar
-;                cmpa    #42               ; SIM
-;                beq     exit              ; SIM
                 jsr     toupper
                 cmpa    #'@'
                 blo     cmderr
@@ -523,11 +516,6 @@ monitor         lda     #'>'              ; Monitor command-level prompt
                 jsr     [a,x]
                 jsr     crlf
                 bra     monitor
-;
-;exit            lda     #4                ; SIM Out of CBREAK mode
-;                swi                       ; SIM
-;                lda     #0                ; SIM Terminate
-;                swi                       ; SIM
 
 ; Monitor command routines
 ; @ - open memory for editing
@@ -902,9 +890,7 @@ uprrtn          rts
 ;putlin_ns       tfr     d,s               ; Save A and B in stack pointer
 ;putlin_ns2      lda     ,x+               ; Fetch char
 ;                beq     putlin_ns1        ; Test for '\0'
-;                tfr     a,b               ; SIM
-;                lda     #5                ; SIM
-;                swi                       ; SIM
+;                ???                       ; Print character
 ;                bra     putlin_ns2
 ;putlin_ns1      tfr     s,d               ; Get saved A and B back from stack pointer
 ;                jmp     ,u                ; Special return via U
@@ -985,8 +971,6 @@ exit2           rts                       ; Exit okay (C = 0), overflow (C = 1)
                 org     uk101reset
 reset           orcc    #%01010000        ; Disable interrupts
                 lds     #ramtop           ; Set up initial stack pointer
-;                lda     #3                ; SIM Into CBREAK mode
-;                swi                       ; SIM
                 clra
                 clrb
                 tfr     d,x
