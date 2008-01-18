@@ -175,7 +175,12 @@ vctrltab        fdb     vctrl_g
                 fdb     vctrl_m
                 fdb     vctrl_n
 
-vctrl_g         nop                       ; CTRL_G: bell
+vctrl_g         bsr     vduflip           ; CTRL_G: bell
+                lda     #20
+flipdly         jsr     dly1ms
+                deca
+                bne     flipdly
+                bsr     vduflip
                 rts
                 
 vctrl_h         decb                      ; CTRL_H: cursor left
@@ -225,6 +230,23 @@ vcl             std     ,x++
 vctrl_n         ldx     #vram+lm          ; CTRL_N: home cursor
                 stx     crsrrow
 vctrl_m         clrb                      ; CTRL_M: carriage return
+                rts
+                
+; VDUFLIP --- flip video display into inverse
+; Entry:
+vduflip         ldy     #vram+lm          ; 4
+                lda     #16               ; 2 vdurows
+flp_r           ldb     #vducols          ; 2 vducols
+                pshs    a
+flp_c           lda     ,y                ;     Load from video RAM
+                eora    #$81              ;     Flip $20 -> $A1
+                sta     ,y+               ;     Store back into video RAM
+                decb                      ; 2
+                bne     flp_c             ; 3  
+                leay    16,y              ; 4+1 Skip 16 bytes in VRAM
+                puls    a
+                deca                      ; 2
+                bne     flp_r             ; 3
                 rts
                 
 ; VDUSAVE --- save video display into memory buffer
@@ -1269,6 +1291,7 @@ rtdone          jsr     crlf
 ;                jsr     putlin
 ;
 addone          ldx     #intrtn           ; Initialise interrupt vector table
+                stx     illvec
                 stx     swi3vec
                 stx     swi2vec
                 stx     swivec
