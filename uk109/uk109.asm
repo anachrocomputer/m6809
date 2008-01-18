@@ -592,7 +592,7 @@ atcmd6          cmpa    #'-'              ; +->decrement byte
 atcmd7          cmpa    #'"'              ; "->display as ASCII
                 bne     atcmd8
                 lda     ,x
-                jsr     t1ou
+                jsr     vduchar
                 jsr     space
                 bra     atcmd1
 atcmd8          nop                       ; Test for hex here
