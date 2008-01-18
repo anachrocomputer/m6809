@@ -251,7 +251,7 @@ keyrst1         rts
 pollkb          pshs    b,x
                 ldx     #1                ; Scancodes are 1-based
                 lda     #kbrow1           ; Start scanning at row 1
-pollrow         jsr     keywrb
+pollrow         bsr     keywrb
                 bne     pollok
                 leax    8,x               ; Next row, next eight scan-codes
                 asla                      ; Next bit to the left
@@ -403,45 +403,45 @@ getchar         pshs    b,x               ; Save B and X
                 
 ; DLY100U
 ; Delay for 100us when running with 8MHz clock
-dly100u         pshs    a                 ; 6
-                lda     #35               ; 2
-dlyloop         deca                      ; 2 * 35
-                bne     dlyloop           ; 3 * 35
-                puls    a,pc              ; 8
+;dly100u         pshs    a                 ; 6
+;                lda     #35               ; 2
+;dlyloop         deca                      ; 2 * 35
+;                bne     dlyloop           ; 3 * 35
+;                puls    a,pc              ; 8
                 
 ; DLY1MS
 ; Delay for one millisecond
-dly1ms          bsr     dly100u
-                bsr     dly100u
-                bsr     dly100u
-                bsr     dly100u
-                bsr     dly100u
-                bsr     dly100u
-                bsr     dly100u
-                bsr     dly100u
-                bsr     dly100u
-                bsr     dly100u
-                rts
+;dly1ms          bsr     dly100u
+;                bsr     dly100u
+;                bsr     dly100u
+;                bsr     dly100u
+;                bsr     dly100u
+;                bsr     dly100u
+;                bsr     dly100u
+;                bsr     dly100u
+;                bsr     dly100u
+;                bsr     dly100u
+;                rts
                 
-ndly1ms         pshs    x                 ; 7
-                ldx     #246              ; 3
-ndlyloop        leax    -1,x              ; 5 * 246
-                bne     ndlyloop          ; 3 * 246
-                puls    x,pc              ; 9
+;ndly1ms         pshs    x                 ; 7
+;                ldx     #246              ; 3
+;ndlyloop        leax    -1,x              ; 5 * 246
+;                bne     ndlyloop          ; 3 * 246
+;                puls    x,pc              ; 9
 
-dly1ms2         pshs    a                 ; 6
+dly1ms          pshs    a                 ; 6
                 lda     #220              ; 2
-dlyloop2        deca                      ; 2 * 220
+dlyloop         deca                      ; 2 * 220
                 nop                       ; 2 * 220
                 nop                       ; 2 * 220
-                bne     dlyloop2          ; 3 * 220
+                bne     dlyloop           ; 3 * 220
                 puls    a,pc              ; 8
 
 ; Various message strings
 rstmsg          fcb     lf,ctrl_i
-                fcc     'UK109 (6809 CPU) V0.1'
+                fcc     'UK109 (6809 CPU) V0.2'
                 fcb     cr,lf,ctrl_i
-                fcc     'Copyright (c) 2004-2006'
+                fcc     'Copyright (c) 2004-2008'
                 fcb     cr,lf
                 fcb     eos
 
@@ -675,14 +675,15 @@ scmd            rts
 ;                jsr     hex2ou            ; Checksum
 ;                jsr     crlf
 ;                rts
-tcmd            clrb
-thang           jsr     ndly1ms           ; 8
-                incb                      ; 2
-                stb     keymatrix         ; 5
-                bra     thang             ; 3 Hang here
+;tcmd            clrb
+;thang           jsr     ndly1ms           ; 8
+;                incb                      ; 2
+;                stb     keymatrix         ; 5
+;                bra     thang             ; 3 Hang here
+tcmd            rts
 
 ucmd            clrb
-uhang           jsr     dly1ms2           ; 8
+uhang           jsr     dly1ms            ; 8
                 incb                      ; 2
                 stb     keymatrix         ; 5
                 bra     uhang             ; 3 Hang here
