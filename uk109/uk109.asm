@@ -581,7 +581,21 @@ atcmd3          jsr     crlf
                 tfr     x,d
                 jsr     hex4ou            ; Print address
                 bra     atcmd5
-atcmd4          nop                       ; Test for hex here
+atcmd4          cmpa    #'+'              ; +->increment byte
+                bne     atcmd6
+                inc     ,x
+                bra     atcmd1
+atcmd6          cmpa    #'-'              ; +->decrement byte
+                bne     atcmd7                   
+                dec     ,x    
+                bra     atcmd1
+atcmd7          cmpa    #'"'              ; "->display as ASCII
+                bne     atcmd8
+                lda     ,x
+                jsr     t1ou
+                jsr     space
+                bra     atcmd1
+atcmd8          nop                       ; Test for hex here
 atcmdx          rts
                 
 acmd            lda     #$5A
