@@ -54,6 +54,20 @@ rngseed2        equ     $ff
 rngseed3        equ     $ee
 
                 org     $0
+govec           rmb     2                 ; Address for 'Go' command
+rega            rmb     1                 ; Saved register contents
+regb            rmb     1
+rege            rmb     1
+regf            rmb     1
+regcc           rmb     1
+regdp           rmb     1
+regmd           rmb     1
+                rmb     1
+regv            rmb     2
+regx            rmb     2
+regy            rmb     2
+regu            rmb     2
+regs            rmb     2
 illvec          rmb     2                 ; 6309 Illegal Instruction trap
 swi3vec         rmb     2
 swi2vec         rmb     2
@@ -120,6 +134,38 @@ ctrlch          cmpa    #nul              ; Ignore NULs
                 puls    a,y               ; Restore A and Y registers
                 bra     vdurtn            ; Back to main VDU routine
 
+; CRLF --- print CR and LF
+; Entry: no parameters
+; Exit:  registers unchanged
+crlf            pshs    a
+                lda     #cr
+                bsr     vduchar
+                lda     #lf
+                bsr     vduchar
+                puls    a,pc
+                
+; SPACE --- print a space
+; Entry: no parameters
+; Exit:  registers unchanged
+space           pshs    a
+                lda     #sp
+                bsr     vduchar
+                puls    a,pc
+                
+; PRTMSG
+; Print message pointed to by X, terminated by zero byte
+prtmsg          pshs    a,x               ; Save A and X registers
+prtmsg1         lda     ,x+
+                beq     prtmsg2
+                bsr     vduchar
+                bra     prtmsg1
+prtmsg2         puls    a,x,pc            ; Restore A and X, then return
+
+; VDU control character handling routines
+vwrap           bsr     vctrl_m           ; Emulate CR/LF
+                bsr     vctrl_j
+                bra     vdurtn
+                
 vctrltab        fdb     vctrl_g
                 fdb     vctrl_h
                 fdb     vctrl_i
@@ -129,10 +175,6 @@ vctrltab        fdb     vctrl_g
                 fdb     vctrl_m
                 fdb     vctrl_n
 
-vwrap           bsr     vctrl_m           ; Emulate CR/LF
-                bsr     vctrl_j
-                bra     vdurtn
-                
 vctrl_g         nop                       ; CTRL_G: bell
                 rts
                 
@@ -266,15 +308,6 @@ polled          tfr     x,d               ; Scancode to B
                 tfr     b,a               ; Scancode to A
 pollnone        puls    b,x,pc
 
-; PRTMSG
-; Print message pointed to by X, terminated by zero byte
-prtmsg          pshs    a,x               ; Save A and X registers
-prtmsg1         lda     ,x+
-                beq     prtmsg2
-                jsr     vduchar
-                bra     prtmsg1
-prtmsg2         puls    a,x,pc            ; Restore A and X, then return
-
 ; Hex output routines
 
 ; HEX1OU --- print a single hex digit
@@ -295,31 +328,21 @@ hex2ou          pshs    a
                 asra
                 asra
                 asra
-                jsr     hex1ou            ; Print high nybble...
+                bsr     hex1ou            ; Print high nybble...
                 puls    a
-                jsr     hex1ou            ; then low nybble
+                bsr     hex1ou            ; then low nybble
                 rts
                 
 ; HEX4OU
 ; Entry: 16 bit value in D
 ; Exit:  registers unchanged
 hex4ou          pshs    d
-                jsr     hex2ou
+                bsr     hex2ou
                 puls    d
                 pshs    d
                 tfr     b,a
-                jsr     hex2ou
+                bsr     hex2ou
                 puls    d,pc
-                
-; CRLF --- print CR and LF
-; Entry: no parameters
-; Exit:  registers unchanged
-crlf            pshs    a
-                lda     #cr
-                jsr     vduchar
-                lda     #lf
-                jsr     vduchar
-                puls    a,pc
                 
 ; T1OU
 ; Entry: A=ASCII char to send to serial port
@@ -389,7 +412,7 @@ getchar         pshs    b,x               ; Save B and X
                                           ; Deal with LOAD flag here
                 lda     #crsrch
                 sta     b,x               ; Display cursor
-                jsr     getkey            ; Get a keystroke
+                bsr     getkey            ; Get a keystroke
                 pshs    a
                 lda     chunder           ; Get the character back again
                 sta     b,x               ; Write it back into VDU RAM
@@ -407,24 +430,6 @@ getchar         pshs    b,x               ; Save B and X
                 
 ; DLY1MS
 ; Delay for one millisecond
-;dly1ms          bsr     dly100u
-;                bsr     dly100u
-;                bsr     dly100u
-;                bsr     dly100u
-;                bsr     dly100u
-;                bsr     dly100u
-;                bsr     dly100u
-;                bsr     dly100u
-;                bsr     dly100u
-;                bsr     dly100u
-;                rts
-                
-;ndly1ms         pshs    x                 ; 7
-;                ldx     #246              ; 3
-;ndlyloop        leax    -1,x              ; 5 * 246
-;                bne     ndlyloop          ; 3 * 246
-;                puls    x,pc              ; 9
-
 dly1ms          pshs    a                 ; 6
                 lda     #220              ; 2
 dlyloop         deca                      ; 2 * 220
@@ -432,6 +437,13 @@ dlyloop         deca                      ; 2 * 220
                 nop                       ; 2 * 220
                 bne     dlyloop           ; 3 * 220
                 puls    a,pc              ; 8
+
+; Alternative implementation
+;ndly1ms         pshs    x                 ; 7
+;                ldx     #246              ; 3
+;ndlyloop        leax    -1,x              ; 5 * 246
+;                bne     ndlyloop          ; 3 * 246
+;                puls    x,pc              ; 9
 
 ; Various message strings
 rstmsg          fcb     lf,ctrl_i
@@ -451,10 +463,10 @@ memokmsg        fcb     ctrl_i
                 fcc     'Memory OK'
                 fcb     eos
 memfail1        fcb     ctrl_i
-                fcc     "RAM test fail1 at $"
+                fcc     "RAM fail1 at $"
                 fcb     eos
 memfail2        fcb     ctrl_i
-                fcc     "RAM test fail2 at $"
+                fcc     "RAM fail2 at $"
                 fcb     eos
 expmsg          fcc     " expected $"
                 fcb     eos
@@ -485,9 +497,6 @@ scantab         fcb     NKY               ; Skip zeroth index
                 fcb     '8'+N,'9'+N,'0',  ':'+N,'-'+N,del,  NKY,  NKY ; 41-48
                 fcb     '1'+N,'2'+N,'3'+N,'4'+N,'5'+N,'6'+N,'7'+N,NKY ; 49-56
 
-helpmsg         fcc     '6809 Monitor'
-                fcb     eos
-                
 cmdtab          fdb     atcmd, acmd, bcmd
                 fdb     ccmd, dcmd, ecmd
                 fdb     fcmd, gcmd, hcmd 
@@ -587,15 +596,15 @@ atcmd7          cmpa    #'"'              ; "->display as ASCII
 atcmd8          nop                       ; Test for hex here
 atcmdx          rts
                 
-acmd            lda     #$5A
-                jsr     hex2ou
-                rts
-bcmd            lda     #$A5
-                jsr     hex2ou
-                rts
-ccmd            ldd     #$BABE
-                jsr     hex4ou
-                rts
+;acmd            lda     #$5A
+;                jsr     hex2ou
+;                rts
+;bcmd            lda     #$A5
+;                jsr     hex2ou
+;                rts
+;ccmd            ldd     #$BABE
+;                jsr     hex4ou
+;                rts
 dcmd            jsr     hex4in
                 tfr     d,x
                 jsr     crlf
@@ -611,44 +620,144 @@ dcmd2           jsr     hex1ou
                 tfr     x,d
                 jsr     hex4ou
                 rts
-ecmd            ldd     #$DEAD
-                jsr     hex4ou
-                rts
-fcmd            jsr     hex2in
+;ecmd            ldd     #$DEAD
+;                jsr     hex4ou
+;                rts
+;fcmd            jsr     hex2in
+;                jsr     crlf
+;                jsr     hex2ou
+;                rts
+
+; Go
+gcmd            jsr     hex4in            ; Get address
                 jsr     crlf
-                jsr     hex2ou
+                std     govec             ; Save address in RAM
+                lda     rega              ; Load up all registers from RAM
+                ldb     regb
+;               fcb     $11,$b6           ; lde rege
+;               fdb     rege
+;               fcb     $11,$f6           ; ldf regf
+;               fdb     regf
+;               ldx     regv
+;               fcb     $1f,$17           ; tfr x,v Can't load V directly
+                ldx     regx
+                ldy     regy
+                ldu     regu
+;               lds     regs              ; Can't load S
+                jsr     [govec]           ; Call user program as subroutine
+                sta     rega              ; Save 'em all again
+                stb     regb
+                tfr     cc,a              ; Can't store CC directly
+                sta     regcc
+                tfr     dp,a              ; Can't store DP directly
+                sta     regdp
+;               tfr     md,a              ; Can't store MD directly
+;               sta     regmd
+;               fcb     $11,$b7           ; ste rege
+;               fdb     rege
+;               fcb     $11,$f7           ; stf regf
+;               fdb     regf
+                stx     regx
+;               fcb     $1f,$71           ; tfr v,x Can't store V directly
+;               stx     regv
+                sty     regy
+                stu     regu
+                sts     regs
                 rts
-gcmd            jsr     hex4in
-                jsr     crlf
-                jsr     hex4ou
-                rts
-hcmd            ldx     #helpmsg
-                jsr     prtmsg
-                rts
-icmd            jsr     hex4in
-                tfr     d,x
-                lda     #','
+;icmd            jsr     hex4in
+;                tfr     d,x
+;                lda     #','
+;                jsr     vduchar
+;                jsr     hex4in
+;                tfr     d,y
+;                jsr     crlf
+;                tfr     x,d
+;                jsr     hex4ou
+;                jsr     space
+;iloop           lda     ,x
+;                jsr     hex2ou
+;                jsr     space
+;                rts
+acmd
+bcmd
+ccmd
+ecmd
+fcmd
+hcmd
+icmd
+jcmd
+kcmd
+lcmd
+mcmd
+ncmd
+ocmd
+pcmd
+qcmd
+scmd
+tcmd
+ucmd            rts
+; Register dump
+rcmd            jsr     crlf
+                lda     rega
+                ldb     #'A'
+                bsr     regprt2
+                lda     regb
+                ldb     #'B'
+                bsr     regprt2
+;               lda     rege
+;               ldb     #'E'
+;               bsr     regprt2
+;               lda     regf
+;               ldb     #'F'
+;               bsr     regprt2
+                lda     #'C'
                 jsr     vduchar
-                jsr     hex4in
-                tfr     d,y
+                lda     regcc
+                ldb     #'C'
+                bsr     regprt2
+                lda     #'D'
+                jsr     vduchar
+                lda     regdp
+                ldb     #'P'
+                bsr     regprt2
+;               lda     #'M'
+;               jsr     vduchar
+;               lda     regmd
+;               ldb     #'D'
+;               bsr     regprt2
                 jsr     crlf
-                tfr     x,d
-                jsr     hex4ou
-                jsr     space
-iloop           lda     ,x
+                ldx     regx
+                lda     #'X'
+                bsr     regprt4
+                ldx     regy
+                lda     #'Y'
+                bsr     regprt4
+                ldx     regu
+                lda     #'U'
+                bsr     regprt4
+                ldx     regs
+                lda     #'S'
+                bsr     regprt4
+;               ldx     regv
+;               lda     #'V'
+;               bsr     regprt4
+                rts
+                
+regprt2         exg     a,b
+                jsr     vduchar
+                lda     #':'
+                jsr     vduchar
+                exg     a,b
                 jsr     hex2ou
                 jsr     space
                 rts
-jcmd            rts
-kcmd            rts
-lcmd            rts
-mcmd            rts
-ncmd            rts
-ocmd            rts
-pcmd            rts
-qcmd            rts
-rcmd            rts
-scmd            rts
+regprt4         jsr     vduchar
+                lda     #':'
+                jsr     vduchar
+                tfr     x,d 
+                jsr     hex4ou
+                jsr     space
+                rts
 ;scmd            jsr     hex4in            ; Save
 ;                tfr     d,x
 ;                lda     #','
@@ -678,18 +787,11 @@ scmd            rts
 ;                jsr     hex2ou            ; Checksum
 ;                jsr     crlf
 ;                rts
-;tcmd            clrb
-;thang           jsr     ndly1ms           ; 8
+;ucmd            clrb
+;uhang           jsr     dly1ms            ; 8
 ;                incb                      ; 2
 ;                stb     keymatrix         ; 5
-;                bra     thang             ; 3 Hang here
-tcmd            rts
-
-ucmd            clrb
-uhang           jsr     dly1ms            ; 8
-                incb                      ; 2
-                stb     keymatrix         ; 5
-                bra     uhang             ; 3 Hang here
+;                bra     uhang             ; 3 Hang here
 
 vcmd            ldx     #vdubuf           ; Save VDU RAM
                 jsr     vdusave
@@ -846,35 +948,27 @@ hexerr          lda     #'?'
 ; HEX2IN --- read a two hex digits from the keyboard
 ; Entry: no parameters
 ; Exit:  8-bit value in A
-hex2in          jsr     hex1in
+hex2in          bsr     hex1in
                 asla
                 asla
                 asla
                 asla
                 pshs    a
-                jsr     hex1in
+                bsr     hex1in
                 ora     ,s+
                 rts
 
 ; HEX4IN --- read a two hex digits from the keyboard
 ; Entry: no parameters
 ; Exit:  16-bit value in D
-hex4in          jsr     hex2in
+hex4in          bsr     hex2in
                 tfr     a,b
-                jsr     hex2in
+                bsr     hex2in
                 exg     a,b
                 rts
                
 ; I/O routines
 
-; SPACE --- print a space
-; Entry: no parameters
-; Exit:  registers unchanged
-space           pshs    a
-                lda     #sp
-                jsr     vduchar
-                puls    a,pc
-                
 ; TOUPPER --- map an ASCII character to upper case
 ; Entry: ASCII character in A
 ; Exit uppercase ASCII character in A, other registers unchanged
@@ -896,83 +990,10 @@ uprrtn          rts
 ;putlin_ns1      tfr     s,d               ; Get saved A and B back from stack pointer
 ;                jmp     ,u                ; Special return via U
                 
-;===============================================================
-;; ACIARST
-;; Reset a 6850 ACIA and select divide-by-16 mode
-;aciarst         pshs    a
-;                lda     #$03
-;                sta     acias
-;                lda     #$11              ; Divide-by-16 mode
-;                sta     acias
-;                puls    a,pc
-
-;===============================================================
-;= DECCON   ASCII decimal to unsigned 16-bit conversion.
-;===============================================================
-;JOB        To convert an unsigned ASCII decimal string held in
-;           memory to a 16-bit binary value in registers, or
-;           return overflow information.
-;ACTION     On 16-bit overflow: [ Set overflow flag. Exit. ]
-;           Clear 16-bit partial result accumulator.
-;           Get 1st character and address next.
-;           WHILE character is ASCII digit;
-;           [ Strip ASCII digits hi-nibble.
-;             Partial result = partial result * 10 + digit.
-;             Get character and adress next. ]
-;---------------------------------------------------------------
-;CPU        6809
-;HARDWARE   Memory containing ASCII decimal number.
-;SOFTWARE   None.
-;---------------------------------------------------------------
-;INPUT      X addresses the 1st (high order) byte of the ASCII
-;           decimal number string. The string must terminate
-;           with any non-digit character.
-;OUTPUT     Y is changed.
-;           C = 1: overflow has occurred. X and D unknown.
-;           C = 0: conversion successfully completed.
-;             D contains the binary equivalent.
-;             X addresses the byte following the terminator.
-;ERRORS     None.
-;REG USE    CC D X Y
-;STACK USE  2
-;RAM USE    None.
-;LENGTH     34
-;CYCLES     38+73 8 number of digits.
-;           (Non-overflow and excluding leading zeros).
-;---------------------------------------------------------------
-;CLASS 2     -discreet      *interruptable      *promable
-;-*****      *reentrant     *relocatable        *robust
-;===============================================================
-;
-DECCON          clra                      ; Zeroise binary result
-                clrb
-;
-nxtdgt          tfr     d,y               ; Move partial result to Y
-                clra                      ; Clear acc hi-byte, get next ASCII
-                ldb     ,x+               ; digit in lo-byte, indexing next.
-                subb    #$30              ; Strip off ASCII digits hi-nybble
-                cmpb    #$0a              ; and test for valid decimal digit.
-                exg     d,y               ; Digit to Y, part result to D.
-                bcc     exit2             ; Exit conversion done if not digit.
-                bita    #$e0              ; Else test if * 10 by shifting will
-                bne     exit2             ; overflow and exit if so, carry set.
-                lslb                      ; Shift partial result up one bit
-                rola                      ; for partial result * 2, and add
-                leay    d,y               ; to new digit in Y.
-                lslb                      ; Second shift gives
-                rola                      ; partial result * 4
-                lslb                      ; Third shift gives 
-                rola                      ; partial result * 8 in D.
-                pshs    y                 ; Put part result * 2 + new digit on
-                addd    ,s++              ; stack and add in, clearing stack.
-                bcc     nxtdgt            ; Repeat if no overflow from add.
-;
-jsrrtn
-exit2           rts                       ; Exit okay (C = 0), overflow (C = 1)
-
                 org     uk101reset
 reset           orcc    #%01010000        ; Disable interrupts
                 lds     #ramtop           ; Set up initial stack pointer
+;               fcb     $11,$3d,$01       ; ldmd #$01 Into 6309 mode
                 clra
                 clrb
                 tfr     d,x
@@ -1269,8 +1290,6 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
                 jsr     keyrst            ; Reset the keyboard
                 
                 jmp     monitor
-;                lda     #$42
-;                jsr     t1ou              ; Send to serial port (300 baud)
                 
 ;loop            jsr     getchar           ; Get a keystroke
 ;                jsr     hex2ou            ; Print ASCII code in hex
@@ -1291,6 +1310,7 @@ irqjmp          jmp     [irqvec]
 firqjmp         jmp     [firqvec]
 nmijmp          jmp     [nmivec]
 intrtn          rti
+jsrrtn          rts
 
                 org     $ffe0
 outchar         jmp     [outvec]          ; A few placeholders for
