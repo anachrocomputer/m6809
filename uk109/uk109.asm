@@ -54,6 +54,7 @@ rngseed2        equ     $ff
 rngseed3        equ     $ee
 
                 org     $0
+illvec          rmb     2                 ; 6309 Illegal Instruction trap
 swi3vec         rmb     2
 swi2vec         rmb     2
 swivec          rmb     2
@@ -966,6 +967,7 @@ nxtdgt          tfr     d,y               ; Move partial result to Y
                 addd    ,s++              ; stack and add in, clearing stack.
                 bcc     nxtdgt            ; Repeat if no overflow from add.
 ;
+jsrrtn
 exit2           rts                       ; Exit okay (C = 0), overflow (C = 1)
 
                 org     uk101reset
@@ -1281,14 +1283,14 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
 ;                jsr     vduchar
 ;                bra     loop
                 
-swi3jmp         jmp     [swi3vec]         ; Table of indirect jumps to ISRs
+illjmp          jmp     [illvec]          ; Table of indirect jumps to ISRs
+swi3jmp         jmp     [swi3vec]
 swi2jmp         jmp     [swi2vec]
 swijmp          jmp     [swivec]
 irqjmp          jmp     [irqvec]
 firqjmp         jmp     [firqvec]
 nmijmp          jmp     [nmivec]
 intrtn          rti
-jsrrtn          rts
 
                 org     $ffe0
 outchar         jmp     [outvec]          ; A few placeholders for
@@ -1296,7 +1298,7 @@ outchar         jmp     [outvec]          ; A few placeholders for
                 jmp     [outvec]          ; indirect on the 6809 is
                 jmp     [outvec]          ; four bytes long
 ; ROM vectors
-                fdb     $ffff             ; Reserved by Motorola
+ill             fdb     illjmp            ; Reserved by Motorola
 swi3            fdb     swi3jmp
 swi2            fdb     swi2jmp
 firq            fdb     firqjmp
