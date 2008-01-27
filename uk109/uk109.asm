@@ -335,12 +335,14 @@ pollnone        puls    b,x,pc
 ; HEX1OU --- print a single hex digit
 ; Entry: 4 bit value in A
 ; Exit:  registers unchanged
-hex1ou          pshs    a,x
+hex1ou          pshs    a
                 anda    #$0f
-                ldx     #hexdig
-                lda     a,x
-                jsr     vduchar
-                puls    a,x,pc
+                ora     #$30              ; 0..9 OK
+                cmpa    #$39              ; ASCII 9
+                bls     h1
+                adda    #7                ; A..F
+h1              jsr     vduchar
+                puls    a,pc
 
 ; HEX2OU
 ; Entry: 8 bit value in A
@@ -360,8 +362,6 @@ hex2ou          pshs    a
 ; Exit:  registers unchanged
 hex4ou          pshs    d
                 bsr     hex2ou
-                puls    d
-                pshs    d
                 tfr     b,a
                 bsr     hex2ou
                 puls    d,pc
@@ -504,8 +504,6 @@ readmsg         fcc     ", read $"
 kbmsg           fcb     ctrl_i
                 fcc     'Keyboard FAIL'
                 fcb     cr,lf,eos
-
-hexdig          fcc     '0123456789ABCDEF'
 
 N               equ     $80                      
 NKY             equ     0
