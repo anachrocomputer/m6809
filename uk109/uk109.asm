@@ -279,19 +279,16 @@ rest_c          ldu     ,x++              ; Load from buffer
                 bne     rest_r
                 puls    a,b,x,y,u,pc
                 
-; KEYW
-; Write a bit-pattern to the keyboard matrix from A
-;keyw            coma                      ; Invert bits because the
-;                sta     keymatrix         ; key matrix is all active-low
-;                coma         
-;                rts
-                
-; KEYRB
-; Read the keyboard matrix, result in B
-;keyrb           ldb     keymatrix         ; Read the keys...
-;                comb                      ; and invert bits
-;                rts
-                
+; KBHIT --- return with carry set if a key is pressed
+kbhit           pshs    a,b
+                lda     #$ff
+                bsr     keywrb
+                andcc   #$fe              ; Clear carry bit
+                andb    #$fe              ; Ignore caps-lock
+                beq     nokbhit
+                orcc    #$01              ; Set carry bit
+nokbhit         puls    a,b,pc
+
 ; KEYWRB
 ; Write a bit-pattern to the keyboard matrix from A, then read into B
 keywrb          coma                      ; Invert bits because the
@@ -909,16 +906,6 @@ matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
                 fcb     35,36,37,38,39,40,41,42,43,44,45,46,47,48,58,59
                 fcb     60,61,62,64,90,92,94,95,123,124,125,126,127,179,180,181
                 fcb     182,211,212,213,214,241,242,243,244,245,246,247,248,249,250,251
-
-; KBHIT --- return with carry set if a key is pressed
-kbhit           pshs    a,b
-                lda     #$ff
-                jsr     keywrb
-                andcc   #$fe              ; Clear carry bit
-                andb    #$fe              ; Ignore caps-lock
-                beq     nokbhit
-                orcc    #$01              ; Set carry bit
-nokbhit         puls    a,b,pc
 
 ; Hex input routines
 
