@@ -920,26 +920,6 @@ kbhit           pshs    a,b
                 orcc    #$01              ; Set carry bit
 nokbhit         puls    a,b,pc
 
-; RND16 --- generate 16-bit pseudo-random number
-rnd16           lda     rng3              ; Pick up 3rd byte of 24 bit SR
-                anda    #$01              ; Mask bottom bit
-                tfr     a,b               ; Put into B
-                lda     rng3              
-                anda    #$20              ; Mask bit 5
-                beq     r1
-                comb                      ; Bit 5 set, so flip B
-r1              lda     rng3
-                anda    #$40              ; Mask bit 6
-                beq     r2
-                comb                      ; Bit 6 set, so flip B
-r2              lsrb                      ; Bottom bit of B into carry
-                rol     rng1              ; Now do a 24-bit left shift
-                rol     rng2              ; taking the carry bit in
-                rol     rng3
-                lda     rng1              ; Load 16 random bits
-                ldb     rng2
-                rts
-                
 ; Hex input routines
 
 ; HEX1IN --- read a single hex digit from the keyboard
@@ -1024,10 +1004,9 @@ reset           orcc    #%01010000        ; Disable interrupts
 ; ACIARST
 ; Reset a 6850 ACIA and select divide-by-16 mode
 ; without calling a subroutine and hence using the stack
-                lda     #$03
-                sta     acias
-                lda     #$11              ; Divide-by-16 mode
-                sta     acias
+                ldd     #$0311
+                sta     acias             ; Store $03: master rest
+                stb     acias             ; Store $11: divide-by-16
                 
 ; Clear UK101 screen
                 lda     #sp
@@ -1071,9 +1050,8 @@ boxloop         lda     #botch            ; Bottom row
                 sta     botrow+lm+47
 
 ; Initialise cursor position
-                clra
                 ldx     #vram+lm
-                sta     crsrpos
+                clr     crsrpos           ; Initial cursor pos = 0
                 stx     crsrrow
                 
 ; Display sign-on message
@@ -1082,7 +1060,8 @@ boxloop         lda     #botch            ; Bottom row
 
 ; ROM checksum
                 ldy     #monrom           ; Y->start of monitor ROM
-                ldd     #0                ; Start with D=0
+                clra                      ; Start with D=0
+                clrb
 romloop         addb    ,y+               ; Add one ROM byte into the checksum
                 adca    #0
                 cmpy    #0                ; See if we've reached the top of ROM yet
@@ -1095,7 +1074,8 @@ romloop         addb    ,y+               ; Add one ROM byte into the checksum
 romerr          ldx     #romerrmsg        ; ROM checksum error
                 jsr     prtmsg
                 tfr     d,u               ; Save actual checksum in U
-                ldd     #0
+                clra
+                clrb
                 ldx     #expmsg           ; "expected"
                 jsr     prtmsg
                 jsr     hex4ou            ; Print expected checksum from A
@@ -1322,6 +1302,28 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
 ;                lda     #$20
 ;                jsr     vduchar
 ;                bra     loop
+                
+; RND16 --- generate 16-bit pseudo-random number
+; Entry: no parameters
+; Exit:  pseudo-random number in D
+rnd16           lda     rng3              ; Pick up 3rd byte of 24 bit SR
+                anda    #$01              ; Mask bottom bit
+                tfr     a,b               ; Put into B
+                lda     rng3              
+                anda    #$20              ; Mask bit 5
+                beq     r1
+                comb                      ; Bit 5 set, so flip B
+r1              lda     rng3
+                anda    #$40              ; Mask bit 6
+                beq     r2
+                comb                      ; Bit 6 set, so flip B
+r2              lsrb                      ; Bottom bit of B into carry
+                rol     rng1              ; Now do a 24-bit left shift
+                rol     rng2              ; taking the carry bit in
+                rol     rng3
+                lda     rng1              ; Load 16 random bits
+                ldb     rng2
+                rts
                 
 illjmp          jmp     [illvec]          ; Table of indirect jumps to ISRs
 swi3jmp         jmp     [swi3vec]
