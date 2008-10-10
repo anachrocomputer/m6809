@@ -521,7 +521,7 @@ hex2in          jsr     hex1in
                 ora     ,s+
                 rts
 
-; HEX4IN --- read two hex digits from the keyboard
+; HEX4IN --- read four hex digits from the keyboard
 ; Entry: no parameters
 ; Exit:  16-bit value in D
 hex4in          jsr     hex2in
