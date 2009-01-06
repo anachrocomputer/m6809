@@ -16,6 +16,7 @@
 ; 15/03/2006 BJ  Altered VDU code to use jump table
 ; 23/03/2006 BJ  Added VDU test pattern
 ; 17/01/2008 BJ  Fixed bug introduced by VDU jump table code
+; 01/02/2008 BJ  Split into two ROMs, one at $A000, other at $F800
 
 eos             equ     $00
 nul             equ     $00
@@ -34,6 +35,7 @@ sp              equ     $20
 del             equ     $7f
 crsrch          equ     $06               ; Character to represent cursor
 blkch           equ     $a1               ; Block character, all pixels lit
+chqch           equ     $bb               ; Block character, chequered
 topch           equ     $87               ; Top row of pixels lit
 botch           equ     $80               ; Bottom row of pixels lit
 lftch           equ     $88               ; Leftmost column of pixels lit
@@ -79,6 +81,10 @@ outvec          rmb     2
 crsrrow         rmb     2
 crsrpos         rmb     1
 chunder         rmb     1                 ; Character under cursor
+boxcol          rmb     2                 ; Box-drawing temporaries
+boxrow          rmb     2
+boxncols        rmb     2
+boxnrows        rmb     2
 keydly          rmb     1
 prevscan        rmb     1                 ; Previous keyboard scan code
 freeram         rmb     1                 ; Beginning of free RAM
@@ -105,11 +111,12 @@ keymatrix       equ     $df00             ; Keyboard matrix
 acias           equ     $f000             ; MC6850 ACIA status/control register
 aciad           equ     $f001             ; Data register
 
-monrom          equ     $f800
+basrom          equ     $a000             ; First BASIC ROM on UK101
+monrom          equ     $f800             ; Monitor ROM on UK101
 
-uk101reset      equ     $fe00
+uk101reset      equ     $fe00             ; Traditional UK101 reset address
 
-                org     monrom
+                org     basrom
 vduchar         pshs    b,x               ; Save B and X registers
                 ldb     crsrpos           ; Get cursor position
                 ldx     crsrrow           ; Get cursor row address
@@ -233,7 +240,8 @@ vctrl_m         clrb                      ; CTRL_M: carriage return
                 rts
                 
 ; VDUFLIP --- flip video display into inverse
-; Entry:
+; Entry: no parameters
+; Exit: A, B, Y changed; X, U unchanged
 vduflip         ldy     #vram+lm          ; 4
                 lda     #16               ; 2 vdurows
 flp_r           ldb     #vducols          ; 2 vducols
@@ -251,6 +259,7 @@ flp_c           lda     ,y                ;     Load from video RAM
                 
 ; VDUSAVE --- save video display into memory buffer
 ; Entry: buffer address in X
+; Exit: registers unchanged
 vdusave         pshs    a,b,x,y,u
                 ldy     #vram+lm          ; 4
                 lda     #16               ; 2 vdurows
@@ -266,6 +275,7 @@ sav_c           ldu     ,y++              ; 5+3 Load from video RAM
                 
 ; VDURESTORE --- restore video display from buffer in memory
 ; Entry: buffer address in X
+; Exit: registers unchanged
 vdurestore      pshs    a,b,x,y,u
                 ldy     #vram+lm
                 lda     #16               ; vdurows
@@ -304,7 +314,7 @@ keyrst          lda     #$ff              ; Test all 8 keyboard rows at once
                 bsr     keywrb
                 andb    #$fe              ; Ignore Caps-Lock
                 beq     keyrst1
-                ldx     #kbmsg            ; Print failure message
+                ldx     #kberrmsg         ; Print failure message
                 jsr     prtmsg
 keyrst1         rts
 
@@ -363,6 +373,65 @@ hex4ou          pshs    d
                 bsr     hex2ou
                 puls    d,pc
                 
+; Hex input routines
+
+; HEX1IN --- read a single hex digit from the keyboard
+; Entry: no parameters
+; Exit:  4-bit value in A
+hex1in          jsr     getchar           ; Read one ASCII character
+                jsr     vduchar           ; Echo it
+                jsr     toupper
+                cmpa    #'0'
+                blo     hexerr
+                cmpa    #'9'
+                bhi     hexalph
+                suba    #'0'
+                bra     hexdone
+hexalph         cmpa    #'A'
+                blo     hexerr
+                cmpa    #'F'
+                bhi     hexerr
+                suba    #'A'-10
+hexdone         rts
+hexerr          lda     #'?'
+                jsr     vduchar
+                clra
+                bra     hexdone
+                
+; HEX2IN --- read a two hex digits from the keyboard
+; Entry: no parameters
+; Exit:  8-bit value in A
+hex2in          bsr     hex1in
+                asla
+                asla
+                asla
+                asla
+                pshs    a
+                bsr     hex1in
+                ora     ,s+
+                rts
+
+; HEX4IN --- read a two hex digits from the keyboard
+; Entry: no parameters
+; Exit:  16-bit value in D
+hex4in          bsr     hex2in
+                tfr     a,b
+                bsr     hex2in
+                exg     a,b
+                rts
+               
+; I/O routines
+
+; TOUPPER --- map an ASCII character to upper case
+; Entry: ASCII character in A
+; Exit uppercase ASCII character in A, other registers unchanged
+toupper         cmpa    #'a'
+                blo     uprrtn
+                cmpa    #'z'
+                bhi     uprrtn
+                suba    #'a'-'A'
+uprrtn          rts
+
 ; T1OU
 ; Entry: A=ASCII char to send to serial port
 ; Exit:  registers unchanged
@@ -464,9 +533,104 @@ dlyloop         deca                      ; 2 * 220
 ;                bne     ndlyloop          ; 3 * 246
 ;                puls    x,pc              ; 9
 
+; RND16 --- generate 16-bit pseudo-random number
+; Entry: no parameters
+; Exit:  pseudo-random number in D
+rnd16           lda     rng3              ; Pick up 3rd byte of 24 bit SR
+                anda    #$01              ; Mask bottom bit
+                tfr     a,b               ; Put into B
+                lda     rng3              
+                anda    #$20              ; Mask bit 5
+                beq     r1
+                comb                      ; Bit 5 set, so flip B
+r1              lda     rng3
+                anda    #$40              ; Mask bit 6
+                beq     r2
+                comb                      ; Bit 6 set, so flip B
+r2              lsrb                      ; Bottom bit of B into carry
+                rol     rng1              ; Now do a 24-bit left shift
+                rol     rng2              ; taking the carry bit in
+                rol     rng3
+                lda     rng1              ; Load 16 random bits
+                ldb     rng2
+                rts
+                
+matrixhack      ldx     #vdubuf           ; Matrix display hack (216 bytes)
+                jsr     vdusave           ; Save video RAM
+                lda     #ctrl_l           ; Clear screen
+                jsr     vduchar
+                lda     #47               ; Loop counter for cols 0-47
+                ldx     #matdly
+                ldy     #mattime
+                ldu     #matcnt
+matinit         pshs    a
+                jsr     rnd16
+                puls    a
+                andb    #63               ; Mask B into range 0-63
+                addb    #40               ; 40ms basic timing
+                stb     a,x
+                stb     a,y
+                pshs    a
+                jsr     rnd16             ; Get random startup count
+                puls    a
+                andb    #$0f              ; Mask down to four bits
+                stb     a,u               ; 0-15 random startup count
+                deca
+                bpl     matinit
+matwait         jsr     kbhit             ; Wait for key to be released
+                bcs     matwait
+matrix          lda     #47               ; Loop counter for 48 columns
+                ldx     #mattime          ; X->timer array
+mtl             dec     a,x
+                bne     noanim
+                jsr     matanim
+                ldx     #matdly           ; X->delay times
+                ldb     a,x               ; Get delay time for this column
+                ldx     #mattime          ; X->current timers
+                stb     a,x               ; Reinitialise timer for this col
+noanim          deca
+                bpl     mtl
+                jsr     dly1ms            ; Delay for 1ms
+                jsr     kbhit             ; Test for keyboard
+                bcc     matrix
+                ldx     #vdubuf
+                jmp     vdurestore        ; Put video RAM back again
+                
+; Entry: A=column number
+matanim         ldx     #botrow+lm
+                leau    -64,x             ; U-> row above
+                ldy     #15               ; 15 screen rows
+ani1            ldb     a,u               ; Get byte from screen
+                stb     a,x               ; Put back in
+                leau    -64,u             ; Move both pointers up one row
+                leax    -64,x
+                leay    -1,y              ; Decrement loop counter
+                bne     ani1
+                ldy     #matcnt           ; Y->counter
+                ldb     a,y               ; Get counter for this col
+                beq     ani2              ; If it's zero, pick a character
+                ldb     #sp               ; Otherwise, pick space
+                dec     a,y               ; Decrement the counter
+                bra     ani3
+ani2            pshs    a                 ; Pick a random character
+                jsr     rnd16             ; Get a random number
+                puls    a
+                andb    #63               ; Mask down to 0-63
+                ldy     #matsyms
+                ldb     b,y               ; Pick up ASCII from table
+ani3            stb     a,x               ; Place at top of column
+;               inc     a,x               ; Increment char at top
+                rts
+                
+; Table of non-alphabetic symbols for the Matrix display hack
+matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
+                fcb     35,36,37,38,39,40,41,42,43,44,45,46,47,48,58,59
+                fcb     60,61,62,64,90,92,94,95,123,124,125,126,127,179,180,181
+                fcb     182,211,212,213,214,241,242,243,244,245,246,247,248,249,250,251
+
 ; Various message strings
 rstmsg          fcb     lf,ctrl_i
-                fcc     'UK109 (6809 CPU) V0.2'
+                fcc     'UK109 (6809 CPU) V0.3'
                 fcb     cr,lf,ctrl_i
                 fcc     'Copyright (c) 2004-2008'
                 fcb     cr,lf
@@ -492,14 +656,21 @@ expmsg          fcc     " expected $"
 readmsg         fcc     ", read $"
                 fcb     eos
                 
-;adrokmsg        fcc     'Memory Addressing OK'
-;                fcb     cr,lf,eos
+adrokmsg        fcc     'Memory Addressing OK'
+                fcb     cr,lf,eos
 
-;adrerrmsg       fcc     'Memory Addressing FAIL'
-;                fcb     cr,lf,eos
+adrerrmsg       fcc     'Memory Addressing FAIL'
+                fcb     cr,lf,eos
                 
-kbmsg           fcb     ctrl_i
+kberrmsg        fcb     ctrl_i
                 fcc     'Keyboard FAIL'
+                fcb     cr,lf,eos
+
+kbokmsg         fcb     ctrl_i
+                fcc     'Keyboard OK'
+                fcb     cr,lf,eos
+
+monmsg          fcc     'UK109 Machine Code Monitor'
                 fcb     cr,lf,eos
 
 N               equ     $80                      
@@ -513,16 +684,6 @@ scantab         fcb     NKY               ; Skip zeroth index
                 fcb     '.'+N,'L'+N,'O'+N,'^',  cr,   NKY,  NKY,  NKY ; 33-40
                 fcb     '8'+N,'9'+N,'0',  ':'+N,'-'+N,del,  NKY,  NKY ; 41-48
                 fcb     '1'+N,'2'+N,'3'+N,'4'+N,'5'+N,'6'+N,'7'+N,NKY ; 49-56
-
-cmdtab          fdb     atcmd, acmd, bcmd
-                fdb     ccmd, dcmd, ecmd
-                fdb     fcmd, gcmd, hcmd 
-                fdb     icmd, jcmd, kcmd
-                fdb     lcmd, mcmd, ncmd
-                fdb     ocmd, pcmd, qcmd
-                fdb     rcmd, scmd, tcmd
-                fdb     ucmd, vcmd, wcmd
-                fdb     xcmd, ycmd, zcmd
 
 ; Monitor command interpreter
 cmderr          lda     #'?'
@@ -544,7 +705,7 @@ monitor         lda     #'>'              ; Monitor command-level prompt
                 jsr     crlf
                 bra     monitor
 
-; Monitor command routines
+; UK101 Monitor command routines
 ; @ - open memory for editing
 ; A - edit Accumulator
 ; B - breakpoint
@@ -572,6 +733,18 @@ monitor         lda     #'>'              ; Monitor command-level prompt
 ; X - edit X reg
 ; Y - edit Y reg
 ; Z - spare
+
+                org     monrom
+cmdtab          fdb     atcmd, acmd, bcmd
+                fdb     ccmd, dcmd, ecmd
+                fdb     fcmd, gcmd, hcmd 
+                fdb     icmd, jcmd, kcmd
+                fdb     lcmd, mcmd, ncmd
+                fdb     ocmd, pcmd, qcmd
+                fdb     rcmd, scmd, tcmd
+                fdb     ucmd, vcmd, wcmd
+                fdb     xcmd, ycmd, zcmd
+
 atcmd           jsr     hex4in            ; '@' command - open memory for editing
                 tfr     d,x
 atcmd5          lda     #'='
@@ -600,7 +773,7 @@ atcmd4          cmpa    #'+'              ; +->increment byte
                 bne     atcmd6
                 inc     ,x
                 bra     atcmd1
-atcmd6          cmpa    #'-'              ; +->decrement byte
+atcmd6          cmpa    #'-'              ; -->decrement byte
                 bne     atcmd7                   
                 dec     ,x    
                 bra     atcmd1
@@ -613,15 +786,15 @@ atcmd7          cmpa    #'"'              ; "->display as ASCII
 atcmd8          nop                       ; Test for hex here
 atcmdx          rts
                 
-;acmd            lda     #$5A
-;                jsr     hex2ou
-;                rts
-;bcmd            lda     #$A5
-;                jsr     hex2ou
-;                rts
-;ccmd            ldd     #$BABE
-;                jsr     hex4ou
-;                rts
+acmd            lda     #$5A
+                jsr     hex2ou
+                rts
+bcmd            lda     #$A5
+                jsr     hex2ou
+                rts
+ccmd            ldd     #$BABE
+                jsr     hex4ou
+                rts
 dcmd            jsr     hex4in
                 tfr     d,x
                 jsr     crlf
@@ -637,13 +810,13 @@ dcmd2           jsr     hex1ou
                 tfr     x,d
                 jsr     hex4ou
                 rts
-;ecmd            ldd     #$DEAD
-;                jsr     hex4ou
-;                rts
-;fcmd            jsr     hex2in
-;                jsr     crlf
-;                jsr     hex2ou
-;                rts
+ecmd            ldd     #$DEAD
+                jsr     hex4ou
+                rts
+fcmd            jsr     hex2in
+                jsr     crlf
+                jsr     hex2ou
+                rts
 
 ; Go
 gcmd            jsr     hex4in            ; Get address
@@ -695,12 +868,9 @@ gcmd            jsr     hex4in            ; Get address
 ;                jsr     hex2ou
 ;                jsr     space
 ;                rts
-acmd
-bcmd
-ccmd
-ecmd
-fcmd
-hcmd
+hcmd            ldx     #monmsg           ; Monitor help command
+                jsr     prtmsg
+                rts
 icmd
 jcmd
 kcmd
@@ -829,142 +999,59 @@ v1              inca                      ; Next ASCII character
                 jsr     getkey            ; Wait for a key press
                 ldx     #vdubuf           ; Restore VDU RAM
                 jmp     vdurestore        ; Put video RAM back again
-wcmd            rts
+wcmd            lda     #1                ; X or column
+                ldb     #2                ; Y or row
+                ldx     #32               ; Width or ncols
+                ldy     #10               ; Height or nrows
+                ldu     #box1             ; Box-drawing char set
+                jsr     vdubox            ; Draw box on VDU
+                inca
+                incb
+                leax    -2,x
+                leay    -2,y
+                leau    8,u
+                jsr     vdubox            ; Draw box on VDU
+                inca
+                incb
+                leax    -2,x
+                leay    -2,y
+                leau    8,u
+                jsr     vdubox            ; Draw box on VDU
+                inca
+                incb
+                leax    -2,x
+                leay    -2,y
+                leau    8,u
+                jsr     vdubox            ; Draw box on VDU
+                rts
 xcmd            rts
 ycmd            jsr     rnd16             ; Get a 16-bit random number
                 jsr     hex4ou
                 rts
-zcmd            ldx     #vdubuf           ; Matrix display hack (216 bytes)
-                jsr     vdusave           ; Save video RAM
-                lda     #ctrl_l           ; Clear screen
-                jsr     vduchar
-                lda     #47               ; Loop counter for cols 0-47
-                ldx     #matdly
-                ldy     #mattime
-                ldu     #matcnt
-matinit         pshs    a
-                jsr     rnd16
-                puls    a
-                andb    #63               ; Mask B into range 0-63
-                addb    #40               ; 40ms basic timing
-                stb     a,x
-                stb     a,y
-                pshs    a
-                jsr     rnd16             ; Get random startup count
-                puls    a
-                andb    #$0f              ; Mask down to four bits
-                stb     a,u               ; 0-15 random startup count
-                deca
-                bpl     matinit
-matwait         jsr     kbhit             ; Wait for key to be released
-                bcs     matwait
-matrix          lda     #47               ; Loop counter for 48 columns
-                ldx     #mattime          ; X->timer array
-mtl             dec     a,x
-                bne     noanim
-                jsr     matanim
-                ldx     #matdly           ; X->delay times
-                ldb     a,x               ; Get delay time for this column
-                ldx     #mattime          ; X->current timers
-                stb     a,x               ; Reinitialise timer for this col
-noanim          deca
-                bpl     mtl
-                jsr     dly1ms            ; Delay for 1ms
-                jsr     kbhit             ; Test for keyboard
-                bcc     matrix
-                ldx     #vdubuf
-                jmp     vdurestore        ; Put video RAM back again
+zcmd            jmp     matrixhack        ; Jump into other ROM
+; VDUBOX --- draw box on the VDU
+; Entry: A=col, B=row, X=ncols, Y=nrows, U=boxchars
+; Exit:  registers unchanged
+vdubox          pshs    a,b,x,y,u         ; Save registers
+                clr     boxcol            ; Zero the high-order byte
+                sta     boxcol+1
+                clr     boxrow
+                stb     boxrow+1
+;               stx     boxncols
+;               sty     boxnrows
+                lda     #vramstride       ; VDU stride
+                mul
+                addd    #vram+lm          ; Add screen base address
+                addd    boxcol            ; Add column number
+                tfr     d,x               ; Address into X
+                lda     4,u               ; Get top-left char
+                sta     ,x                ; Store top left corner
+                puls    a,b,x,y,u,pc
                 
-; Entry: A=column number
-matanim         ldx     #botrow+lm
-                leau    -64,x             ; U-> row above
-                ldy     #15               ; 15 screen rows
-ani1            ldb     a,u               ; Get byte from screen
-                stb     a,x               ; Put back in
-                leau    -64,u             ; Move both pointers up one row
-                leax    -64,x
-                leay    -1,y              ; Decrement loop counter
-                bne     ani1
-                ldy     #matcnt           ; Y->counter
-                ldb     a,y               ; Get counter for this col
-                beq     ani2              ; If it's zero, pick a character
-                ldb     #sp               ; Otherwise, pick space
-                dec     a,y               ; Decrement the counter
-                bra     ani3
-ani2            pshs    a                 ; Pick a random character
-                jsr     rnd16             ; Get a random number
-                puls    a
-                andb    #63               ; Mask down to 0-63
-                ldy     #matsyms
-                ldb     b,y               ; Pick up ASCII from table
-ani3            stb     a,x               ; Place at top of column
-;               inc     a,x               ; Increment char at top
-                rts
-                
-; Table of non-alphabetic symbols for the Matrix display hack
-matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
-                fcb     35,36,37,38,39,40,41,42,43,44,45,46,47,48,58,59
-                fcb     60,61,62,64,90,92,94,95,123,124,125,126,127,179,180,181
-                fcb     182,211,212,213,214,241,242,243,244,245,246,247,248,249,250,251
-
-; Hex input routines
-
-; HEX1IN --- read a single hex digit from the keyboard
-; Entry: no parameters
-; Exit:  4-bit value in A
-hex1in          jsr     getchar           ; Read one ASCII character
-                jsr     vduchar           ; Echo it
-                jsr     toupper
-                cmpa    #'0'
-                blo     hexerr
-                cmpa    #'9'
-                bhi     hexalph
-                suba    #'0'
-                bra     hexdone
-hexalph         cmpa    #'A'
-                blo     hexerr
-                cmpa    #'F'
-                bhi     hexerr
-                suba    #'A'-10
-hexdone         rts
-hexerr          lda     #'?'
-                jsr     vduchar
-                clra
-                bra     hexdone
-                
-; HEX2IN --- read a two hex digits from the keyboard
-; Entry: no parameters
-; Exit:  8-bit value in A
-hex2in          bsr     hex1in
-                asla
-                asla
-                asla
-                asla
-                pshs    a
-                bsr     hex1in
-                ora     ,s+
-                rts
-
-; HEX4IN --- read a two hex digits from the keyboard
-; Entry: no parameters
-; Exit:  16-bit value in D
-hex4in          bsr     hex2in
-                tfr     a,b
-                bsr     hex2in
-                exg     a,b
-                rts
-               
-; I/O routines
-
-; TOUPPER --- map an ASCII character to upper case
-; Entry: ASCII character in A
-; Exit uppercase ASCII character in A, other registers unchanged
-toupper         cmpa    #'a'
-                blo     uprrtn
-                cmpa    #'z'
-                bhi     uprrtn
-                suba    #'a'-'A'
-uprrtn          rts
+box1            fcb     topch,botch,lftch,rghch,tlch,trch,blch,brch
+box2            fcb     blkch,blkch,blkch,blkch,blkch,blkch,blkch,blkch
+box3            fcb     chqch,chqch,chqch,chqch,chqch,chqch,chqch,chqch
+box4            fcb     $95,  $95,  $94,  $94,  blkch,blkch,blkch,blkch
 
 ;; PUTLIN_NS
 ;; Entry: X->string, U contains return address
@@ -1277,7 +1364,7 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
 
                 jsr     keyrst            ; Reset the keyboard
                 
-                jmp     monitor
+                jmp     monitor           ; Jump into other ROM
                 
 ;loop            jsr     getchar           ; Get a keystroke
 ;                jsr     hex2ou            ; Print ASCII code in hex
@@ -1289,28 +1376,6 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
 ;                lda     #$20
 ;                jsr     vduchar
 ;                bra     loop
-                
-; RND16 --- generate 16-bit pseudo-random number
-; Entry: no parameters
-; Exit:  pseudo-random number in D
-rnd16           lda     rng3              ; Pick up 3rd byte of 24 bit SR
-                anda    #$01              ; Mask bottom bit
-                tfr     a,b               ; Put into B
-                lda     rng3              
-                anda    #$20              ; Mask bit 5
-                beq     r1
-                comb                      ; Bit 5 set, so flip B
-r1              lda     rng3
-                anda    #$40              ; Mask bit 6
-                beq     r2
-                comb                      ; Bit 6 set, so flip B
-r2              lsrb                      ; Bottom bit of B into carry
-                rol     rng1              ; Now do a 24-bit left shift
-                rol     rng2              ; taking the carry bit in
-                rol     rng3
-                lda     rng1              ; Load 16 random bits
-                ldb     rng2
-                rts
                 
 illjmp          jmp     [illvec]          ; Table of indirect jumps to ISRs
 swi3jmp         jmp     [swi3vec]
