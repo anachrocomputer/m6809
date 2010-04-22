@@ -120,6 +120,7 @@ int m6809_system(void)
     rti();
     return 0;
   case 6:
+    fflush(stdout);  /* Flush stdout because we're mixing stdio and raw I/O */
     if (read (STDIN, input, 1) <= 0) {
       rti();
       return 1;
