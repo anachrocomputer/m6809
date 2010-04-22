@@ -1,0 +1,17 @@
+6809 BASIC version 0.1
+sim6809 v0.1 - 6809 simulator
+Copyright (c) 1998 by Jerome Thoen
+
+list
+[0724]10 LET A = 256
+[0730]20 FOR B = 1 TO A+1
+[0745]30 GOSUB 50[0761]:NEXT
+[0751]40 IF A=42 THEN STOP
+[0761]50 REM Subroutines
+[0772]60 PRINT "HELLO":RETURN
+[0781]70 GOTO 10[0724]
+run
+0761
+system
+6809 program terminated
+> 
