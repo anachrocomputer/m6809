@@ -43,8 +43,8 @@ TON             equ     $97
                 org     $80
 cmdbuf          rmb     80
 decbuf          rmb     16
-progbase        fdb     line0             ; Base pointer for BASIC program
-progtop         fdb     fakeprogtop
+progbase        fdb     0                 ; Base pointer for BASIC program
+progtop         fdb     0
 scalars         fdb     var0              ; Base pointer for scalar variables
 nscalar         fdb     3
 
@@ -60,7 +60,12 @@ reset           orcc    #%01010000        ; Disable interrupts
                 tfr     d,y
                 tfr     d,u
                 tfr     a,dp              ; Set up Direct Page register
-
+                
+                ldx     #line0            ; Initialise program base pointer
+                stx     progbase
+                ldx     #fakeprogtop
+                stx     progtop
+                
                 ldx     #vermsg
                 jsr     prtmsg
 
@@ -118,8 +123,14 @@ delline         nop
                 ldx     #delmsg
                 jsr     prtmsg
                 jsr     prtdec16          ; Echo line number
-                jsr     crlf
-                bra     cmdloop
+                jsr     space
+                jsr     findln            ; Find line in memory
+                cmpx    #0                ; Did we find it?
+                beq     deldone           ; ...no
+                tfr     x,d
+                jsr     hex4ou
+deldone         jsr     crlf
+                jmp     cmdloop
                 
 exit            lda     #4                ; SIM Out of CBREAK mode
                 swi                       ; SIM
@@ -321,9 +332,9 @@ SAVE            nop
 SYSTEM          jmp     exit              ; Doesn't clean up the stack
 
 ; FINDLN
-; Entry: A=Line number
+; Entry: D=Line number
 ; Exit: X=Line pointer (NULL if not found)
-findln          ldx     #line0
+findln          ldx     progbase
 findln1         cmpx    #0
                 beq     finddn
                 cmpd    2,x               ; Compare with next word
