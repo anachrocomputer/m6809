@@ -81,7 +81,7 @@ cmdloop         lda     #80
 ;               jsr     prtmsg
 ;               jsr     crlf
                 clra                      ; Must be immediate command
-                ldb     #8                ; Number of keywords
+                ldb     #10               ; Number of keywords
                 ldu     #kwtab            ; Pointer to keyword table
 kwsrch          ldy     ,u++
                 jsr     strequc
@@ -222,15 +222,17 @@ lrw2            puls    a,x,pc
                 
 ; LIST --- needs start/end line numbers
 LIST            ldx     progbase
-listln          cmpx    #0                ; End of list?
-                beq     listdn
+listln          ldd     ,x++              ; Read link to next line
+                beq     listdn            ; Reached end-of-program sentinel?
+                pshs    d                 ; DB
                 lda     #'['              ; DB
                 jsr     t1ou              ; DB
                 tfr     x,d               ; DB
+                subd    #2                ; DB
                 jsr     hex4ou            ; DB
                 lda     #']'              ; DB
                 jsr     t1ou              ; DB
-                ldd     ,x++              ; Read link to next line
+                puls    d                 ; DB
                 tfr     d,u               ; Save pointer to next line
                 ldd     ,x++              ; Get line number
                 jsr     prtdec16          ; Print in decimal
@@ -306,17 +308,27 @@ runsynerr       ldx     #synmsg
                 jsr     prtmsg
                 bra     rundn
 
+; PDUMP --- dump program area in hex for debugging
+PDUMP           nop
+                rts
+                
+; VDUMP --- dump variable area in hex for debugging
+VDUMP           nop
+                rts
+                
 ; CONT --- continue execution after STOP or BREAK
 CONT            ldx     #contmsg
                 jsr     prtmsg
                 rts
                 
 ; NEW --- delete all program lines
-NEW             ldx     #0
+NEW             ldx     #line0
                 stx     progbase
-                stx     progtop
-                stx     scalars
-                stx     nscalar
+                ldd     #0
+                std     ,x
+                std     progtop
+                std     scalars
+                std     nscalar
                 rts
                 
 ; LOAD --- load program from storage
@@ -334,14 +346,29 @@ SYSTEM          jmp     exit              ; Doesn't clean up the stack
 ; FINDLN
 ; Entry: D=Line number
 ; Exit: X=Line pointer (NULL if not found)
-findln          ldx     progbase
-findln1         cmpx    #0
-                beq     finddn
+findln          pshs    y
+                ldx     progbase
+findln1         ldy     ,x                ; Load link to next line
+                cmpy    #0                ; At end-of-program sentinel?
+                beq     findnot
                 cmpd    2,x               ; Compare with next word
                 beq     finddn            ; If equal, we're done
-                ldx     ,x                ; Follow pointer
+                tfr     y,x               ; Follow link
                 bra     findln1
-finddn          rts
+findnot         ldx     #0                ; We didn't find the line
+finddn          puls    y,pc
+                
+; FINDTOP
+; Find top of program area
+; Entry: none
+; Exit: Address of end-of-program sentinel in X
+findtop         pshs    y
+                ldx     progbase
+findtop1        ldy     ,x      
+                beq     findtop2
+                tfr     y,x
+                bra     findtop1
+findtop2        puls    y,pc
                 
 ; 32-bit addition
 ; Entry: X, Y pointers to parameters
@@ -740,6 +767,8 @@ kwtab           fdb     klist
                 fdb     kload
                 fdb     ksave
                 fdb     ksystem
+                fdb     kpdump
+                fdb     kvdump
                 
 cmdtab          fdb     LIST
                 fdb     VLIST
@@ -749,6 +778,8 @@ cmdtab          fdb     LIST
                 fdb     LOAD
                 fdb     SAVE
                 fdb     SYSTEM
+                fdb     PDUMP
+                fdb     VDUMP
                 
 ; Table of routines for LIST
 listtab         fdb     LLET
@@ -817,6 +848,10 @@ kload           fcc     'LOAD'
 ksave           fcc     'SAVE'
                 fcb     eos
 ksystem         fcc     'SYSTEM'
+                fcb     eos
+kpdump          fcc     'PDUMP'
+                fcb     eos
+kvdump          fcc     'VDUMP'
                 fcb     eos
 
 klet            fcc     'LET'
@@ -947,12 +982,13 @@ line60          fdb     line70
                 fcb     SEP
                 fcb     TRETURN
                 fcb     eol
-line70          fdb     0
+line70          fdb     sentinel
                 fdb     70
                 fcb     TGOTO
                 fdb     10
                 fdb     line10
                 fcb     eol
+sentinel        fdb     0                 ; End-of-program sentinel
 
 fakeprogtop     equ     *
 
