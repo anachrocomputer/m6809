@@ -989,8 +989,7 @@ line70          fdb     sentinel
                 fdb     line10
                 fcb     eol
 sentinel        fdb     0                 ; End-of-program sentinel
-
-fakeprogtop     equ     *
+fakeprogtop
 
 ; The scalar variables, normally built by the pre-run module
 var0            fcb     'A'
