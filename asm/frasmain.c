@@ -353,7 +353,10 @@ prtequvalue(lv)
 	parameter	long integer value
 */
 {
-	fprintf(intermedf, "C: 0x%lx\n", lv);
+	fprintf(intermedf, "C:%c%c%c%c\n", hexch((int)lv>>12),
+	                                   hexch((int)lv>>8),
+	                                   hexch((int)lv>>4),
+	                                   hexch((int)lv));
 }
 
 #define SYMPERLINE 3
