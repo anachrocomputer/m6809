@@ -345,16 +345,15 @@ fracherror(str, start, beyond)
 }
 
 
-prtequvalue(fstr, lv)
-	char * fstr;
+prtequvalue(lv)
 	long lv;
 /*
 	description	first pass - generate comment lines in intermediate file
 			for the value in a set, equate, or org statement, etc...
-	parameters	format string and a long integer value
+	parameter	long integer value
 */
 {
-	fprintf(intermedf, fstr, lv);
+	fprintf(intermedf, "C: 0x%lx\n", lv);
 }
 
 #define SYMPERLINE 3

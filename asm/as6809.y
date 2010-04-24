@@ -34,6 +34,7 @@ COMPILERS: 	Microport Sys V/AT, ATT Yacc, Turbo C V1.5, Bison (CUG disk 285)
 			September 12, 1990 - short file names
 			September 14, 1990 - short variable names
 			September 17, 1990 - use yylex as external
+			April 24, 2010 - removed format string from 'prtequval()'
 */
 #include <stdio.h>
 #include "frasmdat.h"
@@ -268,8 +269,7 @@ line	:	LABEL KOC_END
 					{
 						$1 -> seg = SSG_EQU;
 						$1 -> value = evalr[0].value;
-						prtequvalue("C: 0x%lx\n",
-							evalr[0].value);
+						prtequvalue(evalr[0].value);
 					}
 					else
 					{
@@ -293,8 +293,7 @@ line	:	LABEL KOC_END
 					{
 						$1 -> seg = SSG_SET;
 						$1 -> value = evalr[0].value;
-						prtequvalue("C: 0x%lx\n",
-							evalr[0].value);
+						prtequvalue(evalr[0].value);
 					}
 					else
 					{
@@ -412,8 +411,7 @@ line	:	LABEL KOC_END
 					else
 						fraerror(
 						"multiple definition of label");
-					prtequvalue("C: 0x%lx\n",
-						evalr[0].value);
+					prtequvalue(evalr[0].value);
 				}
 				else
 				{
@@ -427,8 +425,7 @@ line	:	LABEL KOC_END
 				if(evalr[0].seg == SSG_ABS)
 				{
 					locctr = labelloc = evalr[0].value;
-					prtequvalue("C: 0x%lx\n",
-						evalr[0].value);
+					prtequvalue(evalr[0].value);
 				}
 				else
 				{
@@ -445,7 +442,7 @@ line	:	LABEL KOC_END
 					{
 		fraerror( "cannot create character translation table");
 					}
-					prtequvalue("C: 0x%lx\n", $1 -> value);
+					prtequvalue($1 -> value);
 				}
 				else
 				{
@@ -455,7 +452,7 @@ line	:	LABEL KOC_END
 	|		KOC_CHUSE
 			{
 				chtcpoint = (int *) NULL;
-				prtequvalue("C: 0x%lx\n", 0L);
+				prtequvalue(0L);
 			}
 	|		KOC_CHUSE expr
 			{
@@ -465,12 +462,12 @@ line	:	LABEL KOC_END
 					if( evalr[0].value == 0)
 					{
 						chtcpoint = (int *)NULL;
-						prtequvalue("C: 0x%lx\n", 0L);
+						prtequvalue(0L);
 					}
 					else if(evalr[0].value < chtnxalph)
 					{
 				chtcpoint = chtatab[evalr[0].value];
-				prtequvalue("C: 0x%lx\n", evalr[0].value);
+				prtequvalue(evalr[0].value);
 					}
 					else
 					{
@@ -514,7 +511,7 @@ line	:	LABEL KOC_END
 			frawarn("character translation value truncated");
 				}
 				*charaddr = evalr[0].value & 0xff;
-				prtequvalue("C: 0x%lx\n", evalr[0].value);
+				prtequvalue(evalr[0].value);
 						}
 						break;
 
@@ -553,7 +550,7 @@ line	:	LABEL KOC_END
 			{
 				$1 -> seg = SSG_ABS;
 				$1 -> value = labelloc;
-				prtequvalue("C: 0x%lx\n", labelloc);
+				prtequvalue(labelloc);
 
 			}
 			else
@@ -614,7 +611,7 @@ genline	:	KOC_BDEF	exprlist
 				if(evalr[0].seg == SSG_ABS)
 				{
 					locctr = labelloc + evalr[0].value;
-					prtequvalue("C: 0x%lx\n", labelloc);
+					prtequvalue(labelloc);
 				}
 				else
 				{
