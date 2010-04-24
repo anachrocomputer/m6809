@@ -189,6 +189,8 @@ void outphase(hexflag)
 			{
 				flushsourceline();
 				fputs(&finbuff[2], loutf);
+				fprintf(stderr, "%s - line %d - %s",
+					currentfnm, linenumber, &finbuff[2]);
 			}
 			else
 			{
@@ -738,7 +740,9 @@ frp2undef(symp)
 	if(listflag)
 	{
 		flushsourceline();
-		fprintf(loutf," ERROR -  undefined symbol %s\n", symp ->symstr);
+		fprintf(loutf," ERROR - undefined symbol %s\n", symp ->symstr);
+		fprintf(stderr, "%s - line %d - ERROR - undefined symbol  %s\n", 
+			currentfnm, linenumber, symp -> symstr);
 	}
 	else
 		fprintf(loutf, "%s - line %d - ERROR - undefined symbol  %s\n", 
@@ -759,6 +763,8 @@ frp2warn(str)
 	{
 		flushsourceline();
 		fprintf(loutf, " WARNING - %s\n", str);
+		fprintf(stderr, "%s - line %d - WARNING - %s\n", 
+			currentfnm, linenumber, str);
 	}
 	else
 		fprintf(loutf, "%s - line %d - WARNING - %s\n", 
@@ -779,6 +785,8 @@ frp2error(str)
 	{
 		flushsourceline();
 		fprintf(loutf, " ERROR - %s\n", str);
+		fprintf(stderr, "%s - line %d - ERROR - %s\n", 
+			currentfnm, linenumber, str);
 	}
 	else
 		fprintf(loutf, "%s - line %d - ERROR - %s\n", 
