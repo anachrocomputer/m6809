@@ -384,7 +384,7 @@ static printsymbols(FILE *fp)
 		syp = symbindex[syn];
 
 		if(syp -> seg != SSG_UNDEF)
-			fprintf(fp, "%8.8lx %-15.15s  ",syp -> value,
+			fprintf(fp, "%4.4lX %-15.15s  ",syp -> value,
 				syp -> symstr);
 		else
 			fprintf(fp, "???????? %-15.15s  ", syp -> symstr);
@@ -412,7 +412,7 @@ static filesymbols(FILE *fp)
 		syp = symbindex[syn];
 
 		if(syp -> seg != SSG_UNDEF)
-			fprintf(fp, "%8.8lx %s\n",syp -> value,
+			fprintf(fp, "%4.4lX %s\n",syp -> value,
 				syp -> symstr);
 		else
 			fprintf(fp, "???????? %s\n", syp -> symstr);
