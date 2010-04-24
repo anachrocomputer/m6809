@@ -173,7 +173,11 @@ extern enum readacts nextreadact;
 char * savestring(), *findgen();
 long	strtol();
 void	reservedsym();
+#ifdef __STDC__
+#include <stdlib.h>
+#else
 char	*calloc(), *malloc();
+#endif
 
 extern struct symel * endsymbol;
 extern char ignosyn[] ;
