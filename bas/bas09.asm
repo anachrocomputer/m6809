@@ -82,7 +82,7 @@ cmdloop         lda     #80
 ;               jsr     prtmsg
 ;               jsr     crlf
                 clra                      ; Must be immediate command
-                ldb     #11               ; Number of keywords
+                ldb     #(cmdtabend-cmdtab)/2
                 ldu     #kwtab            ; Pointer to keyword table
 kwsrch          ldy     ,u++
                 jsr     strequc
@@ -815,6 +815,7 @@ cmdtab          fdb     LIST
                 fdb     PDUMP
                 fdb     VDUMP
                 fdb     MEM
+cmdtabend
                 
 ; Table of routines for LIST
 listtab         fdb     LLET
@@ -841,6 +842,7 @@ listtab         fdb     LLET
                 fdb     LDIM
                 fdb     LDEF
                 fdb     LON
+listtabend
 
 ; Table of BASIC reserved words
 rwordtab        fdb     klet
@@ -867,6 +869,7 @@ rwordtab        fdb     klet
                 fdb     kdim
                 fdb     kdef
                 fdb     kon
+rwordtabend
 
 klist           fcc     'LIST'
                 fcb     eos
