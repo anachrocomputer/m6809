@@ -82,7 +82,7 @@ cmdloop         lda     #80
 ;               jsr     prtmsg
 ;               jsr     crlf
                 clra                      ; Must be immediate command
-                ldb     #10               ; Number of keywords
+                ldb     #11               ; Number of keywords
                 ldu     #kwtab            ; Pointer to keyword table
 kwsrch          ldy     ,u++
                 jsr     strequc
@@ -331,13 +331,22 @@ dump2           jsr     space
                 beq     dump3
                 incb
                 andb    #$0f
-                beq     dump4             ; o back and print CR/LF and address
+                beq     dump4             ; Go back and print CR/LF and address
                 bra     dump2
 dump3           jsr     crlf
                 rts
                 
 ; VDUMP --- dump variable area in hex for debugging
 VDUMP           nop
+                rts
+                
+; MEM --- print memory usage information
+MEM             jsr     findtop
+                tfr     x,d
+                subd    progbase          ; Subract base address to get
+                jsr     prtdec16
+                ldx     #memmsg
+                jsr     prtmsg
                 rts
                 
 ; CONT --- continue execution after STOP or BREAK
@@ -793,6 +802,7 @@ kwtab           fdb     klist
                 fdb     ksystem
                 fdb     kpdump
                 fdb     kvdump
+                fdb     kmem
                 
 cmdtab          fdb     LIST
                 fdb     VLIST
@@ -804,6 +814,7 @@ cmdtab          fdb     LIST
                 fdb     SYSTEM
                 fdb     PDUMP
                 fdb     VDUMP
+                fdb     MEM
                 
 ; Table of routines for LIST
 listtab         fdb     LLET
@@ -877,6 +888,8 @@ kpdump          fcc     'PDUMP'
                 fcb     eos
 kvdump          fcc     'VDUMP'
                 fcb     eos
+kmem            fcc     'MEM'
+                fcb     eos
 
 klet            fcc     'LET'
                 fcb     eos
@@ -946,6 +959,8 @@ delmsg          fcc     'Delete line: '
 insmsg          fcc     'Insert line: '
                 fcb     eos
 playmsg         fcc     'Press play on tape'
+                fcb     cr,lf,eos
+memmsg          fcc     ' bytes used'
                 fcb     cr,lf,eos
 vermsg          fcc     '6809 BASIC version 0.1'
                 fcb     cr,lf,eos
