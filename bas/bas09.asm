@@ -47,6 +47,7 @@ progbase        fdb     0                 ; Base pointer for BASIC program
 progtop         fdb     0
 scalars         fdb     var0              ; Base pointer for scalar variables
 nscalar         fdb     3
+tempw           fdb     0                 ; Temporary word location
 
                 org     $0100             ; Just above "zero-page"
 
@@ -309,7 +310,30 @@ runsynerr       ldx     #synmsg
                 bra     rundn
 
 ; PDUMP --- dump program area in hex for debugging
-PDUMP           nop
+PDUMP           jsr     findtop           ; Find the address of the sentinel
+                tfr     x,d
+                subd    progbase          ; Subract base address to get
+                tfr     d,x               ; program length in bytes
+                leax    2,x               ; We want to show the two zero bytes (sentinel)
+                ldy     progbase
+                ldb     #0                ; B reg counts bytes per row (0..15)
+                bra     dump1
+dump4           jsr     crlf
+dump1           pshs    d
+                tfr     y,d
+                jsr     hex4ou            ; Print address
+                puls    d
+dump2           jsr     space
+                lda     ,y+
+                jsr     hex2ou            ; Print bytes of program memory
+                leax    -1,x
+                cmpx    #0
+                beq     dump3
+                incb
+                andb    #$0f
+                beq     dump4             ; o back and print CR/LF and address
+                bra     dump2
+dump3           jsr     crlf
                 rts
                 
 ; VDUMP --- dump variable area in hex for debugging
