@@ -1,0 +1,121 @@
+<HTML>
+<HEAD>
+</HEAD>
+<BODY>
+<H1>6809 BASIC Design Notes</H1>
+<H2>Language Features</H2>
+<P>
+16-bit integer BASIC.
+16-bit limitation implies that I/O POKE addresses will be
+negative (like Apple ][).
+Would 32-bit integers be that much slower?
+Maybe have integer variables A% to Z% like BBC BASIC.
+The Resident Integer Variables are signed 32 bit values and
+are not cleared by RUN or even NEW (only a reset clears them).
+These variables are at a fixed location in RAM and take up
+104 bytes (26 * 4).
+UK101 BASIC uses 32-bit floating point for variables.
+Two-character variable names.
+Lowercase input legal but mapped to uppercase for output.
+Should we support strings?
+If so, how?
+Need syntax for HEX constants (0x, $, &amp;, ?)
+DATA/RESTORE must accept a RESTORE&lt;line number&gt; format.
+Multi-statement lines with colon ':'.
+WHILE/WEND loops.
+REPEAT/UNTIL loops.
+IF/THEN/ELSE is more tricky.
+Need some sort of escape to machine code.
+Add C-like binary operators for AND '&amp;' and OR '|'.
+</P>
+<H2>Source editor</H2>
+<P>
+Reads command line and allows editing of BASIC source code. Deals with
+immediate commands, source line deletions, passes source line insertions
+on to Tokeniser.
+Deletions must close up the gap in memory left by the deleted line.
+Insertions must get tokenised and then a gap must be opened
+up in memory to accomodate the new line.
+Immediate commands must be tokenised and then executed.
+Certain commands are illegal in immediate mode.
+Certain immediate mode actions will prevent the use of CONT
+to continue execution.
+</P>
+<H2>Tokeniser</H2>
+<P>
+Converts source lines to internal representation.
+Performs certain types of syntax check.
+GOTO&lt;line number&gt becomes TGOTO LNHI LNLO ADHI ADLO where
+AD represents the address of the destination line.
+Constants and variables are tokenised.
+</P>
+<H2>Pre-run module</H2>
+Scans entire program for GOTO/GOSUB consistency.
+Performs certain error checks.
+Builds data structure for BASIC variables.
+</P>
+<P>
+One of the functions of the Pre-run module could be to build
+a constant table in memory.
+Then, we could assign frequently-used constants to special
+one-byte tokens that would save memory and speed up
+execution.
+A simpler version of this plan would be to create fixed
+tokens for small constants (e.g. 0, 1, -1) and use them
+when appropriate.
+A more ambitious scheme would be to implement a similar setup
+for variables, although the savings might not be worthwhile.
+A side benefit would be a CLIST command to list all
+constants in the program.
+The dynamic constant table version would imply that the
+Pre-run module could make the program shrink in size
+(token + two bytes of constant -> one byte token).
+It also complicates the LIST mechanism.
+</P>
+<P>
+The Pre-run module could implement a mechanism so that it
+only executes if the source has been changed since the last
+Pre-run.
+Commands like LIST, CLIST and VLIST will need to execute
+Pre-run.
+</P>
+<H2>Run-time</H2>
+<P>
+Interprets program as fast as possible.
+Needs current interpretation pointer, current source line number,
+current DATA pointer, etc.
+Should never need to search at run-time; all searching will
+be done by the pre-run module.
+</P>
+<P>
+Should the 6809 BASIC utilise the additional registers of the
+Hitachi 6309?
+And/or the additional instructions?
+If so, how can it be made to run on the ordinary 6809?
+</P>
+<P>
+Should BASIC support hardware like the sound chip, and if so, how?
+What about games joypads, analog joysticks and the like?
+Should there be an event-driven interface of some sort?
+</P>
+<H2>Run-time Data Requirements</H2>
+<P>
+At run time, we need a current interpretation pointer (equivalent
+to the $00BC routine on the UK101).
+Since the 6809 has so many more registers than the 6502, we can
+afford to dedicate a register to this function.
+But should it be X, Y or U?
+Or should we use a 6309 enhanced register?
+</P>
+<P>
+We also need a DATA pointer, pointers for top of RAM, top of
+program, top of variables and so on.
+UK101 BASIC has an I/O flag for CTRL-O, but we won't need that.
+</P>
+<H2>Load/save mechanism</H2>
+<P>
+Saves source code in ASCII form.
+Invokes LIST for SAVE, tokeniser for LOAD.
+</P>
+</BODY>
+</HTML>
