@@ -337,8 +337,16 @@ dump3           jsr     crlf
                 rts
                 
 ; VDUMP --- dump variable area in hex for debugging
-VDUMP           nop
-                rts
+VDUMP           ldy     #vdumptab
+vdump1          ldx     ,y++              ; Load pointer to string
+                beq     vdump2
+                jsr     prtmsg
+                ldx     ,y++              ; Load pointer to data word
+                ldd     ,x                ; Load data word
+                jsr     hex4ou
+                jsr     crlf
+                bra     vdump1
+vdump2          rts
                 
 ; MEM --- print memory usage information
 MEM             jsr     findtop
@@ -968,6 +976,24 @@ memmsg          fcc     ' bytes used'
 vermsg          fcc     '6809 BASIC version 0.1'
                 fcb     cr,lf,eos
 
+vd1             fcc     'progbase: '
+                fcb     eos
+vd2             fcc     'progtop:  '
+                fcb     eos
+vd3             fcc     'scalars:  '
+                fcb     eos
+vd4             fcc     'nscalar:  '
+                fcb     eos
+vd5             fcc     'tempw:    '
+                fcb     eos
+
+vdumptab        fdb     vd1,progbase
+                fdb     vd2,progtop
+                fdb     vd3,scalars
+                fdb     vd4,nscalar
+                fdb     vd5,tempw
+                fdb     0,0
+                
 line0
 line10          fdb     line20            ; Pointer to next line
                 fdb     10                ; Line number
