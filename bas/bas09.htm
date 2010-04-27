@@ -33,13 +33,26 @@ Add C-like binary operators for AND '&amp;' and OR '|'.
 Reads command line and allows editing of BASIC source code. Deals with
 immediate commands, source line deletions, passes source line insertions
 on to Tokeniser.
-Deletions must close up the gap in memory left by the deleted line.
-Insertions must get tokenised and then a gap must be opened
-up in memory to accomodate the new line.
 Immediate commands must be tokenised and then executed.
 Certain commands are illegal in immediate mode.
 Certain immediate mode actions will prevent the use of CONT
 to continue execution.
+<H3>Delete Line</H3>
+Lines are deleted from the BASIC program by a two step process.
+The first step is to find the line that is to be deleted and
+then work out how long it is by subtracting its next line pointer.
+Knowing the length of the line, we can follow the line links,
+subtracting the length to give the new address.
+The second step is to block move all the date above the deleted
+line down in memory to close up the gap.
+<H3>Insert Line</H3>
+Insertions must get tokenised and then a gap must be opened
+up in memory to accomodate the new line.
+<H3>Change Line</H3>
+This is simply handled by first deleting, then inserting the
+line.
+The small inefficiency of doing two block moves in insignificant
+compared to the simplicity of this approach.
 </P>
 <H2>Tokeniser</H2>
 <P>
@@ -50,8 +63,11 @@ AD represents the address of the destination line.
 Constants and variables are tokenised.
 </P>
 <H2>Pre-run module</H2>
-Scans entire program for GOTO/GOSUB consistency.
-Performs certain error checks.
+Will scan the BASIC text for GOTO, GOSUB, etc. and fill in pointer.
+Will scan for DIM statements.
+Should it scan for scalar variable initialisation?
+Checks entire program for GOTO/GOSUB consistency.
+Performs certain error checks, e.g. GOTO to a non-existent line.
 Builds data structure for BASIC variables.
 </P>
 <P>
