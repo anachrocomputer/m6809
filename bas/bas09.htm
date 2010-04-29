@@ -45,9 +45,25 @@ Knowing the length of the line, we can follow the line links,
 subtracting the length to give the new address.
 The second step is to block move all the date above the deleted
 line down in memory to close up the gap.
+<p>
+If the user deletes a line or lines of the BASIC program, then
+the program cannot be continued with CONT.
+This is because the line deleted may have been the target of
+a GOTO or GOSUB.
+Internally, memory has been moved around and the variables
+and arrays will no longer be valid.
+To re-run the program, a call to the pre-run module is mandatory.
 <H3>Insert Line</H3>
 Insertions must get tokenised and then a gap must be opened
 up in memory to accomodate the new line.
+<p>
+If the user inserts a line or lines into the BASIC program, then
+the program cannot be continued with CONT.
+This is because the line inserted may contain a GOTO or GOSUB,
+or a varible reference that the pre-run module hasn't seen.
+Internally, memory has been moved around and the variables
+and arrays will no longer be valid.
+To re-run the program, a call to the pre-run module is mandatory.
 <H3>Change Line</H3>
 This is simply handled by first deleting, then inserting the
 line.
