@@ -107,7 +107,9 @@ lnumseen        jsr     atoi16u           ; Convert line number to binary
                 tfr     d,y               ; Stash in Y
                 jsr     skipbl            ; Skip trailing blanks
                 lda     ,x
-                beq     delline           ; User wants to delete a line
+                bne     insline
+                jsr     delline           ; User wants to delete a line
+                bra     cmdloop           ; Go back for another command line
 insline         nop
                 tfr     y,d               ; Get line number into D
                 ldx     #insmsg
@@ -120,6 +122,10 @@ lnumovf         ldx     #ovfmsg           ; Line number too big
                 jsr     prtmsg
                 bra     cmdloop
 
+; DELLINE
+; Delete a line from the BASIC program
+; Entry: line number in Y register
+; Exit: line deleted, no return value
 delline         jsr     findtop           ; Address of sentinel in X
                 stx     progtop           ; Save for later
                 tfr     y,d               ; Get line number back
@@ -167,8 +173,12 @@ del3            lda     b,x
                 leay    -1,y
                 cmpy    #0
                 bne     del3
-deldone         jmp     cmdloop
+deldone         rts
                 
+; EXIT
+; Exit from BASIC and return to OS (should clean up)
+; Entry: none
+; Exit: does not return
 exit            lda     #4                ; SIM Out of CBREAK mode
                 swi                       ; SIM
                 lda     #0                ; SIM Terminate
