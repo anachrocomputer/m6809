@@ -48,6 +48,7 @@ progtop         fdb     0
 scalars         fdb     var0              ; Base pointer for scalar variables
 nscalar         fdb     3
 tempw           fdb     0                 ; Temporary word location
+ptr1            fdb     0                 ; Temporary pointer
 
                 org     $0100             ; Just above "zero-page"
 
@@ -119,19 +120,54 @@ lnumovf         ldx     #ovfmsg           ; Line number too big
                 jsr     prtmsg
                 bra     cmdloop
 
-delline         nop
+delline         jsr     findtop           ; Address of sentinel in X
+                stx     progtop           ; Save for later
                 tfr     y,d               ; Get line number back
-                ldx     #delmsg
-                jsr     prtmsg
-                jsr     prtdec16          ; Echo line number
-                jsr     space
+;               ldx     #delmsg           ; DB
+;               jsr     prtmsg            ; DB
+;               jsr     prtdec16          ; DB Echo line number
+;               jsr     space             ; DB
                 jsr     findln            ; Find line in memory
                 cmpx    #0                ; Did we find it?
                 beq     deldone           ; ...no
                 tfr     x,d
-                jsr     hex4ou
-deldone         jsr     crlf
-                jmp     cmdloop
+;               jsr     hex4ou            ; DB
+; X -> line in memory
+; Y = line number
+                stx     ptr1              ; Remember line pointer for later
+                stx     tempw             ; Save line address for now
+                ldd     ,x
+                subd    tempw
+                std     tempw             ; Amount to subtract from each pointer
+;               jsr     space             ; DB
+;               jsr     prtdec16          ; DB Print size of gap to close up
+;               jsr     crlf              ; DB
+                ldx     ,x                ; Follow link in line to be deleted
+del1            ldd     ,x                ; Load link to be modified
+                beq     del2   
+                tfr     d,y               ; Save original link
+;               jsr     hex4ou            ; DB Print link target address
+;               jsr     space             ; DB
+                subd    tempw             ; Subract length of deleted line
+                std     ,x                ; Write it back
+                tfr     y,x               ; Follow old link
+                bra     del1
+del2            ldx     progtop           ; Address of sentinel in X
+                tfr     x,d               ; Into D for arithmetic
+                subd    ptr1              ; Subtract address of line to be deleted
+                subd    tempw             ; Subtract length of line
+                addd    #2                ; Add length of sentinel
+;               jsr     prtdec16          ; DB
+;               jsr     crlf       
+                tfr     d,y               ; Count into Y
+                ldd     tempw             ; Offset into D
+                ldx     ptr1              ; Get address of line to be deleted
+del3            lda     b,x
+                sta     ,x+
+                leay    -1,y
+                cmpy    #0
+                bne     del3
+deldone         jmp     cmdloop
                 
 exit            lda     #4                ; SIM Out of CBREAK mode
                 swi                       ; SIM
@@ -965,8 +1001,8 @@ ovfmsg          fcc     'Line number too big'
                 fcb     cr,lf,eos
 contmsg         fcc     'Cant continue'
                 fcb     cr,lf,eos
-delmsg          fcc     'Delete line: '
-                fcb     eos
+;delmsg          fcc     'Delete line: '
+;                fcb     eos
 insmsg          fcc     'Insert line: '
                 fcb     eos
 playmsg         fcc     'Press play on tape'
