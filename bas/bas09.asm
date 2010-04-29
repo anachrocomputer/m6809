@@ -52,6 +52,87 @@ ptr1            fdb     0                 ; Temporary pointer
 
                 org     $0100             ; Just above "zero-page"
 
+line0
+line10          fdb     line20            ; Pointer to next line
+                fdb     10                ; Line number
+                fcb     TLET              ; Token for LET
+                fcb     'A'               ; Variable name in ASCII
+                fdb     varA              ; Pointer to variable's value
+                fcb     TCONST            ; Token for constant         
+                fdb     256               ; Constant's value  
+                fcb     eol               ; End of line
+line20          fdb     line30            ; Link
+                fdb     20    
+                fcb     TFOR
+                fcb     'B'
+                fdb     varB
+                fcb     TCONST
+                fdb     1
+                fcb     TTO
+                fcb     TVAR              ; Token for single letter variable
+                fcb     'A'
+                fdb     varA
+                fcc     '+'
+                fcb     TCONST
+                fdb     1       
+                fcb     eol
+line30          fdb     line40            ; Link
+                fdb     30
+                fcb     TGOSUB
+                fdb     50
+                fdb     line50
+                fcb     SEP
+                fcb     TNEXT
+                fcb     eol
+line40          fdb     line50
+                fdb     40
+                fcb     TIF
+                fcb     TVAR
+                fcc     'A'
+                fdb     varA
+                fcc     '='
+                fcb     TCONST
+                fdb     42
+                fcb     TTHEN
+                fcb     TSTOP
+                fcb     eol
+line50          fdb     line60
+                fdb     50
+                fcb     TREM
+                fcc     'Subroutines'
+                fcb     eol
+line60          fdb     line70
+                fdb     60
+                fcb     TPRINT
+                fcc     '"HELLO"'
+                fcb     SEP
+                fcb     TRETURN
+                fcb     eol
+line70          fdb     sentinel
+                fdb     70
+                fcb     TGOTO
+                fdb     10
+                fdb     line10
+                fcb     eol
+sentinel        fdb     0                 ; End-of-program sentinel
+fakeprogtop
+
+; The scalar variables, normally built by the pre-run module
+var0            fcb     'A'
+                fcb     0
+varA            fdb     0                 ; 42 decimal
+                fdb     42
+                fcb     'B'
+                fcb     0
+varB            fdb     1                 ; 65536 decimal
+                fdb     0
+                fcb     'X'
+                fcb     '1'
+varX1           fdb     $ffff             ; -1 decimal
+                fdb     $ffff
+
+                rmb     1024              ; Unused RAM
+                
 reset           orcc    #%01010000        ; Disable interrupts
                 lds     #$7fff            ; Set up initial stack pointer
                 lda     #3                ; SIM Into CBREAK mode
@@ -1040,83 +1121,5 @@ vdumptab        fdb     vd1,progbase
                 fdb     vd5,tempw
                 fdb     0,0
                 
-line0
-line10          fdb     line20            ; Pointer to next line
-                fdb     10                ; Line number
-                fcb     TLET              ; Token for LET
-                fcb     'A'               ; Variable name in ASCII
-                fdb     varA              ; Pointer to variable's value
-                fcb     TCONST            ; Token for constant         
-                fdb     256               ; Constant's value  
-                fcb     eol               ; End of line
-line20          fdb     line30            ; Link
-                fdb     20    
-                fcb     TFOR
-                fcb     'B'
-                fdb     varB
-                fcb     TCONST
-                fdb     1
-                fcb     TTO
-                fcb     TVAR              ; Token for single letter variable
-                fcb     'A'
-                fdb     varA
-                fcc     '+'
-                fcb     TCONST
-                fdb     1       
-                fcb     eol
-line30          fdb     line40            ; Link
-                fdb     30
-                fcb     TGOSUB
-                fdb     50
-                fdb     line50
-                fcb     SEP
-                fcb     TNEXT
-                fcb     eol
-line40          fdb     line50
-                fdb     40
-                fcb     TIF
-                fcb     TVAR
-                fcc     'A'
-                fdb     varA
-                fcc     '='
-                fcb     TCONST
-                fdb     42
-                fcb     TTHEN
-                fcb     TSTOP
-                fcb     eol
-line50          fdb     line60
-                fdb     50
-                fcb     TREM
-                fcc     'Subroutines'
-                fcb     eol
-line60          fdb     line70
-                fdb     60
-                fcb     TPRINT
-                fcc     '"HELLO"'
-                fcb     SEP
-                fcb     TRETURN
-                fcb     eol
-line70          fdb     sentinel
-                fdb     70
-                fcb     TGOTO
-                fdb     10
-                fdb     line10
-                fcb     eol
-sentinel        fdb     0                 ; End-of-program sentinel
-fakeprogtop
-
-; The scalar variables, normally built by the pre-run module
-var0            fcb     'A'
-                fcb     0
-varA            fdb     0                 ; 42 decimal
-                fdb     42
-                fcb     'B'
-                fcb     0
-varB            fdb     1                 ; 65536 decimal
-                fdb     0
-                fcb     'X'
-                fcb     '1'
-varX1           fdb     $ffff             ; -1 decimal
-                fdb     $ffff
 
 reset           end
