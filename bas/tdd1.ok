@@ -1,7 +1,7 @@
-6809 BASIC version 0.1
 sim6809 v0.1 - 6809 simulator
 Copyright (c) 1998 by Jerome Thoen
 
+6809 BASIC version 0.1
 list
 [0100]10 LET A = 256
 [010C]20 FOR B = 1 TO A+1

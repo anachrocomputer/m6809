@@ -57,6 +57,7 @@ void console_init(void)
     printf("sim6809 v0.1 - 6809 simulator\n");
     printf("Copyright (c) 1998 by Jerome Thoen\n");
     printf("\n");  
+    fflush(stdout);  /* Flush stdout because we're mixing stdio and raw I/O */
   }
 }
 
