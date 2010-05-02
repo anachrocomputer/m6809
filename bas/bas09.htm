@@ -56,6 +56,13 @@ To re-run the program, a call to the pre-run module is mandatory.
 <H3>Insert Line</H3>
 Insertions must get tokenised and then a gap must be opened
 up in memory to accomodate the new line.
+The line insertion routine must make a fairly complicated check
+for out of memory errors, and must do so <i>before</i> any
+changes are made to the current BASIC program.
+Inserting a new line may make the BASIC program larger, or smaller
+(long line replaced with shorter line),
+or it may remain the same size (line replaced with corrected line
+of same length).
 <p>
 If the user inserts a line or lines into the BASIC program, then
 the program cannot be continued with CONT.
@@ -73,7 +80,8 @@ compared to the simplicity of this approach.
 <H2>Tokeniser</H2>
 <P>
 Converts source lines to internal representation.
-Performs certain types of syntax check.
+Deals with shorthand '?' for PRINT.
+Performs certain types of syntax check, e.g. mismatched string quotes.
 GOTO&lt;line number&gt becomes TGOTO LNHI LNLO ADHI ADLO where
 AD represents the address of the destination line.
 Constants and variables are tokenised.
