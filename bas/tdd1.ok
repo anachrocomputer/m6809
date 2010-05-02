@@ -80,6 +80,27 @@ mem
 0 bytes used
 run
 0000
+10              rem # Test Program
+mem
+23 bytes used
+20    PrInt"Hello, World"
+mem
+47 bytes used
+30?"***"
+mem
+58 bytes used
+40end
+mem
+66 bytes used
+list
+[0100]10 rem # Test Program
+[0117]20 PrInt"Hello, World"
+[012F]30 ?"***"
+[013A]40 end
+new
+mem
+0 bytes used
+list
 system
 6809 program terminated
 > 

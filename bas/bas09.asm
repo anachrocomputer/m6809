@@ -49,6 +49,8 @@ scalars         fdb     var0              ; Base pointer for scalar variables
 nscalar         fdb     3
 tempw           fdb     0                 ; Temporary word location
 ptr1            fdb     0                 ; Temporary pointer
+lnum            fdb     0                 ; Line number
+lintext         fdb     0                 ; Pointer to text of line
 
                 org     $0100             ; Just above "zero-page"
 
@@ -184,30 +186,88 @@ kwfound         ;jsr     hex2ou
                 bra     cmdloop
                 
 lnumseen        jsr     atoi16u           ; Convert line number to binary
-                bcs     lnumovf           ; Overflow?
+                lbcs    lnumovf           ; Overflow?
                 tfr     d,y               ; Stash in Y
                 jsr     skipbl            ; Skip trailing blanks
                 lda     ,x
                 bne     insline
                 jsr     delline           ; User wants to delete a line
                 bra     cmdloop           ; Go back for another command line
-insline         nop
+insline         jsr     tokenise
+                cmpa    #0                ; Zero length means error
+                beq     cmdloop
+                stx     lintext           ; Remember where the line text begins
+;               jsr     prtdec8           ; DB
+;               jsr     space             ; DB
+                jsr     delline           ; New line is OK, so delete old one
+                tfr     a,b
+                clra
+                addd    #5                ; Additional five bytes for line number, link and terminator
+                std     tempw             ; Amount to add to each pointer
+                jsr     findtop           ; Find sentinel after deletion but before modifying linked list
+                stx     progtop           ; Save for later
+                sty     lnum
                 tfr     y,d               ; Get line number into D
-                ldx     #insmsg
-                jsr     prtmsg
-                jsr     prtdec16          ; Echo line number
-                jsr     crlf
-                bra     cmdloop
+;               ldx     #insmsg           ; DB
+;               jsr     prtmsg            ; DB
+;               jsr     prtdec16          ; DB Echo line number
+                jsr     findins           ; Find insertion point (in X)
+                stx     ptr1              ; Remember line pointer for later
+;               tfr     x,d               ; DB
+;               jsr     space             ; DB
+;               jsr     hex4ou            ; DB
+;               jsr     crlf              ; DB
+;               jsr     space             ; DB
+;               ldd     tempw             ; DB
+;               jsr     prtdec16          ; DB Print size of gap to open up
+;               jsr     crlf              ; DB
+ins1            ldd     ,x                ; Load link to be modified
+                beq     ins2   
+                tfr     d,y               ; Save original link
+;               jsr     hex4ou            ; DB Print link target address
+;               jsr     space             ; DB
+                addd    tempw             ; Add length of inserted line
+                std     ,x                ; Write it back
+                tfr     y,x               ; Follow old link
+                bra     ins1
+ins2            ldx     progtop           ; Address of sentinel in X
+                tfr     x,d               ; Into D for arithmetic
+                subd    ptr1              ; Subtract address where line will be inserted
+                addd    #2                ; Add length of sentinel
+;               jsr     prtdec16          ; DB
+;               jsr     crlf              ; DB
+                tfr     d,y               ; Count into Y
+                ldd     tempw             ; Offset into D
+                ldx     progtop           ; Get address of sentinel
+                leax    1,x               ; Start one byte higher
+ins3            lda     ,x
+                sta     b,x
+                leax    -1,x              ; Work backwards
+                leay    -1,y
+                cmpy    #0
+                bne     ins3
+                ldx     ptr1              ; Load insertion point address
+                tfr     x,d
+                addd    tempw
+                std     ,x++              ; Store link to next line
+                ldd     lnum              ; Fetch line number
+                std     ,x++              ; Store it
+                ldy     lintext           ; Get ready to copy line test into place
+ins4            lda     ,y+
+                sta     ,x+
+                bne     ins4              ; Copy terminating zero byte
+                jmp     cmdloop
 
 lnumovf         ldx     #ovfmsg           ; Line number too big
                 jsr     prtmsg
-                bra     cmdloop
+                jmp     cmdloop
 
 ; DELLINE
 ; Delete a line from the BASIC program
 ; Entry: line number in Y register
 ; Exit: line deleted, no return value
-delline         jsr     findtop           ; Address of sentinel in X
+delline         pshs    d,x,y
+                jsr     findtop           ; Address of sentinel in X
                 stx     progtop           ; Save for later
                 tfr     y,d               ; Get line number back
 ;               ldx     #delmsg           ; DB
@@ -254,8 +314,20 @@ del3            lda     b,x
                 leay    -1,y
                 cmpy    #0
                 bne     del3
-deldone         rts
+deldone         puls    d,x,y,pc
                 
+; TOKENISE
+; Convert BASIC keywords to single byte tokens
+; Entry: X -> first non-blank char in source line, after line number
+; Exit: X unchanged, points to tokenised line
+tokenise        pshs    x,y
+                clra
+tok1            ldb     ,x+
+                beq     tok2
+                inca
+                bra     tok1
+tok2            puls    x,y,pc
+
 ; EXIT
 ; Exit from BASIC and return to OS (should clean up)
 ; Entry: none
@@ -512,6 +584,7 @@ SAVE            nop
 SYSTEM          jmp     exit              ; Doesn't clean up the stack
 
 ; FINDLN
+; Find address of a line, given line number
 ; Entry: D=Line number
 ; Exit: X=Line pointer (NULL if not found)
 findln          pshs    y
@@ -525,6 +598,21 @@ findln1         ldy     ,x                ; Load link to next line
                 bra     findln1
 findnot         ldx     #0                ; We didn't find the line
 finddn          puls    y,pc
+                
+; FINDINS
+; Find insertion point for new line
+; Entry: D=Line number
+; Exit: X=Address to insert new line
+findins         pshs    y
+                ldx     progbase
+findin1         ldy     ,x                ; Load link to next line
+                cmpy    #0                ; At end-of-program sentinel?
+                beq     findidn
+                cmpd    2,x               ; Compare with next word
+                blo     findidn           ; If higher, we're done
+                tfr     y,x               ; Follow link
+                bra     findin1
+findidn         puls    y,pc
                 
 ; FINDTOP
 ; Find top of program area
@@ -743,6 +831,16 @@ prtdec16        pshs    d,x,y
                 jsr     prtmsg
                 puls    d,x,y,pc
                 
+; PRTDEC8
+; Print 8-bit number in decimal
+; Entry: number in A
+; Exit: registers unchanged
+prtdec8         pshs    d
+                tfr     a,b
+                clra
+                jsr     prtdec16
+                puls    d,pc
+
 ; I/O routines
 
 ; SPACE --- print a space

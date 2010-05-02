@@ -29,5 +29,17 @@ mem
 list
 mem
 run
+10              rem # Test Program
+mem
+20    PrInt"Hello, World"
+mem
+30?"***"
+mem
+40end
+mem
+list
+new
+mem
+list
 system
 q
