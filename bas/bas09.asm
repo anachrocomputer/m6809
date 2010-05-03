@@ -14,6 +14,7 @@ eos             equ     0
 eol             equ     0
 
 SEP             equ     ':'
+PRINTABBR       equ     '?'
 
 TLET            equ     $80
 TCONST          equ     $81
@@ -319,12 +320,16 @@ deldone         puls    d,x,y,pc
 ; TOKENISE
 ; Convert BASIC keywords to single byte tokens
 ; Entry: X -> first non-blank char in source line, after line number
-; Exit: X unchanged, points to tokenised line
+; Exit: X unchanged, points to tokenised line. A = length of line
 tokenise        pshs    x,y
                 clra
 tok1            ldb     ,x+
                 beq     tok2
-                inca
+                cmpb    #PRINTABBR
+                bne     tok3
+                ldb     #TPRINT
+                stb     -1,x
+tok3            inca
                 bra     tok1
 tok2            puls    x,y,pc
 

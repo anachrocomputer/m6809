@@ -92,7 +92,7 @@ mem
 list
 [0100]10 rem # Test Program
 [0117]20 PrInt"Hello, World"
-[012F]30 ?"***"
+[012F]30 PRINT "***"
 [013A]40 end
 new
 mem
