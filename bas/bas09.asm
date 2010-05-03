@@ -13,9 +13,18 @@ bel             equ     7
 eos             equ     0
 eol             equ     0
 
-SEP             equ     ':'
-PRINTABBR       equ     '?'
+MAXLINE         equ     80                ; Length of line input buffer
 
+DATASEG         equ     $0000             ; Data segment begins at address 0000
+BASICTEXT       equ     $0100             ; Start of BASIC program in internal form
+TOPOFRAM        equ     $7fff             ; Top of 32k RAM
+UK101BAS        equ     $a000             ; Compukit UK101 BASIC ROM $A000-$BFFF
+
+SEP             equ     ':'               ; Multi-statement lines use the colon separator
+PRINTABBR       equ     '?'               ; Abbreviation for PRINT is question-mark
+
+; Tokens for all the BASIC keywords
+; Must be in same order as table 'rwordtab'
 TLET            equ     $80
 TCONST          equ     $81
 TVAR            equ     $82
@@ -41,8 +50,8 @@ TDIM            equ     $95
 TDEF            equ     $96
 TON             equ     $97
 
-                org     $80
-cmdbuf          rmb     80
+                org     DATASEG
+cmdbuf          rmb     MAXLINE
 decbuf          rmb     16
 progbase        fdb     0                 ; Base pointer for BASIC program
 progtop         fdb     0
@@ -53,10 +62,9 @@ ptr1            fdb     0                 ; Temporary pointer
 lnum            fdb     0                 ; Line number
 lintext         fdb     0                 ; Pointer to text of line
 
-                org     $0100             ; Just above "zero-page"
+                org     BASICTEXT         ; BASIC text storage
 
-line0
-line10          fdb     line20            ; Pointer to next line
+line10          fdb     line20            ; Small dummy BASIC program for development only
                 fdb     10                ; Line number
                 fcb     TLET              ; Token for LET
                 fcb     'A'               ; Variable name in ASCII
@@ -64,8 +72,8 @@ line10          fdb     line20            ; Pointer to next line
                 fcb     TCONST            ; Token for constant         
                 fdb     256               ; Constant's value  
                 fcb     eol               ; End of line
-line20          fdb     line30            ; Link
-                fdb     20    
+line20          fdb     line30            ; Link pointer to next line
+                fdb     20                ; Line number
                 fcb     TFOR
                 fcb     'B'
                 fdb     varB
@@ -79,7 +87,7 @@ line20          fdb     line30            ; Link
                 fcb     TCONST
                 fdb     1       
                 fcb     eol
-line30          fdb     line40            ; Link
+line30          fdb     line40            ; Link pointer to next line
                 fdb     30
                 fcb     TGOSUB
                 fdb     50
@@ -134,28 +142,33 @@ varB            fdb     1                 ; 65536 decimal
 varX1           fdb     $ffff             ; -1 decimal
                 fdb     $ffff
 
-                rmb     1024              ; Unused RAM
+; Unused RAM from here upwards
+
+                org     TOPOFRAM
+RAMTOP          rmb     1
                 
-reset           orcc    #%01010000        ; Disable interrupts
-                lds     #$7fff            ; Set up initial stack pointer
+                org     UK101BAS          ; Interpreter code at same address as ROM in UK101
+                
+RESET           orcc    #%01010000        ; Disable interrupts
+                lds     #RAMTOP           ; Set up initial stack pointer
                 lda     #3                ; SIM Into CBREAK mode
                 swi                       ; SIM
-                clra
+                clra                      ; Initialise all CPU registers
                 clrb
                 tfr     d,x
                 tfr     d,y
                 tfr     d,u
                 tfr     a,dp              ; Set up Direct Page register
                 
-                ldx     #line0            ; Initialise program base pointer
+                ldx     #BASICTEXT        ; Initialise program base pointer
                 stx     progbase
-                ldx     #fakeprogtop
-                stx     progtop
+                ldx     #fakeprogtop      ; Initial BASIC program is non-empty
+                stx     progtop           ; Change this when dummy BASIC is removed
                 
-                ldx     #vermsg
+                ldx     #vermsg           ; Print version message on start-up
                 jsr     prtmsg
 
-cmdloop         lda     #80
+cmdloop         lda     #MAXLINE
                 ldx     #cmdbuf           ; Command-level line buffer
                 jsr     getlin
                 cmpa    #0
@@ -567,7 +580,7 @@ CONT            ldx     #contmsg
                 rts
                 
 ; NEW --- delete all program lines
-NEW             ldx     #line0
+NEW             ldx     #BASICTEXT
                 stx     progbase
                 ldd     #0
                 std     ,x
@@ -1056,6 +1069,7 @@ cmdtab          fdb     LIST
 cmdtabend
                 
 ; Table of routines for LIST
+; Must be in same order as tokens
 listtab         fdb     LLET
                 fdb     LCONST
                 fdb     LVAR
@@ -1083,6 +1097,7 @@ listtab         fdb     LLET
 listtabend
 
 ; Table of BASIC reserved words
+; Must be in same order as tokens
 rwordtab        fdb     klet
                 fdb     kconst
                 fdb     kvar
@@ -1189,8 +1204,8 @@ synmsg          fcc     'Syntax error'
                 fcb     cr,lf,eos
 lnummsg         fcc     'Line number expected'
                 fcb     cr,lf,eos
-unsupmsg        fcc     'That function is not yet supported'
-                fcb     cr,lf,eos
+;unsupmsg        fcc     'That function is not yet supported'
+;                fcb     cr,lf,eos
 ovfmsg          fcc     'Line number too big'
                 fcb     cr,lf,eos
 contmsg         fcc     'Cant continue'
@@ -1225,4 +1240,4 @@ vdumptab        fdb     vd1,progbase
                 fdb     0,0
                 
 
-reset           end
+RESET           end
