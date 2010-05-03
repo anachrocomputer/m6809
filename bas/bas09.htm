@@ -21,12 +21,34 @@ Should we support strings?
 If so, how?
 Need syntax for HEX constants (0x, $, &amp;, ?)
 DATA/RESTORE must accept a RESTORE&lt;line number&gt; format.
+Should we support a RANDOMIZE (or RANDOMISE) statement?
+Minimal BASIC only allows a GOTO after a THEN; should we
+support the more general case, as UK101 BASIC does?
 Multi-statement lines with colon ':'.
 WHILE/WEND loops.
 REPEAT/UNTIL loops.
 IF/THEN/ELSE is more tricky.
 Need some sort of escape to machine code.
 Add C-like binary operators for AND '&amp;' and OR '|'.
+What about C-like shift operators &lt;&lt; and &gt;&gt; like ARM BBC BASIC?
+Should there be a RENUMBER command?
+What about AUTO line numbering?
+Do we need TRON and TROFF for tracing?
+Should the editor and tokeniser preserve indentation of
+source lines?
+What about spaces within source lines (delete them, add them or do nothing)?
+The Kemeny and Kurtz book uses indentation to show structure.
+Do we need the LINPUT keyword (or LINE INPUT or INPUT LINE)?
+What about LPRINT and LLIST?
+UK101 BASIC allows a PRINT string to have no closing quote;
+should we do the same?
+</P>
+<P>
+Should we support in-line comments with the single quote
+syntax?
+<PRE>
+20 GOSUB 1000 ' Read input
+</PRE>
 </P>
 <H2>Source editor</H2>
 <P>
@@ -43,7 +65,7 @@ The first step is to find the line that is to be deleted and
 then work out how long it is by subtracting its next line pointer.
 Knowing the length of the line, we can follow the line links,
 subtracting the length to give the new address.
-The second step is to block move all the date above the deleted
+The second step is to block move all the data above the deleted
 line down in memory to close up the gap.
 <p>
 If the user deletes a line or lines of the BASIC program, then
@@ -67,7 +89,7 @@ of same length).
 If the user inserts a line or lines into the BASIC program, then
 the program cannot be continued with CONT.
 This is because the line inserted may contain a GOTO or GOSUB,
-or a varible reference that the pre-run module hasn't seen.
+or a variable reference that the pre-run module hasn't seen.
 Internally, memory has been moved around and the variables
 and arrays will no longer be valid.
 To re-run the program, a call to the pre-run module is mandatory.
@@ -82,9 +104,17 @@ compared to the simplicity of this approach.
 Converts source lines to internal representation.
 Deals with shorthand '?' for PRINT.
 Performs certain types of syntax check, e.g. mismatched string quotes.
-GOTO&lt;line number&gt becomes TGOTO LNHI LNLO ADHI ADLO where
+GOTO&lt;line number&gt; becomes TGOTO LNHI LNLO ADHI ADLO where
 AD represents the address of the destination line.
 Constants and variables are tokenised.
+</P>
+<P>
+Should the tokeniser (or any part of the interpreter) generate
+warnings?
+For instance, a line with a GOTO followed by a colon and another
+statement would imply that the second statement is unreachable.
+But a GOTO followed by a colon and a REM is OK.
+Would such warnings be useful?
 </P>
 <H2>Pre-run module</H2>
 Will scan the BASIC text for GOTO, GOSUB, etc. and fill in pointer.
@@ -109,7 +139,7 @@ A side benefit would be a CLIST command to list all
 constants in the program.
 The dynamic constant table version would imply that the
 Pre-run module could make the program shrink in size
-(token + two bytes of constant -> one byte token).
+(token + two bytes of constant -&gt; one byte token).
 It also complicates the LIST mechanism.
 </P>
 <P>
@@ -156,6 +186,8 @@ UK101 BASIC has an I/O flag for CTRL-O, but we won't need that.
 <P>
 Saves source code in ASCII form.
 Invokes LIST for SAVE, tokeniser for LOAD.
+Should the LOAD routine warn or error in cases where a loaded
+source line overwrites one already loaded?
 </P>
 </BODY>
 </HTML>
