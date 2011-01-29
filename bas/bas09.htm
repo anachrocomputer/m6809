@@ -31,8 +31,8 @@ IF/THEN/ELSE is more tricky.
 Need some sort of escape to machine code.
 Add C-like binary operators for AND '&amp;' and OR '|'.
 What about C-like shift operators &lt;&lt; and &gt;&gt; like ARM BBC BASIC?
-Should there be a RENUMBER command?
-What about AUTO line numbering?
+Should there be a RENUMBER command (BBC BASIC has one)?
+What about AUTO line numbering (BBC BASIC has it)?
 Do we need TRON and TROFF for tracing?
 Should the editor and tokeniser preserve indentation of
 source lines?
@@ -96,7 +96,7 @@ To re-run the program, a call to the pre-run module is mandatory.
 <H3>Change Line</H3>
 This is simply handled by first deleting, then inserting the
 line.
-The small inefficiency of doing two block moves in insignificant
+The small inefficiency of doing two block moves is insignificant
 compared to the simplicity of this approach.
 </P>
 <H2>Tokeniser</H2>
@@ -181,6 +181,26 @@ Or should we use a 6309 enhanced register?
 We also need a DATA pointer, pointers for top of RAM, top of
 program, top of variables and so on.
 UK101 BASIC has an I/O flag for CTRL-O, but we won't need that.
+</P>
+<H2>Commands and Immediate Mode</H2>
+<P>
+Microsoft BASIC allows any command to be used within a program,
+and allows any program statement to be used in command mode.
+Not all BASICs do this.
+</P>
+LIST has the unusual property that, in its arguments, a dash
+is not interpreted as the arithmetical symbol for subtraction,
+but denotes a range.
+That is, the command LIST 20-50 is interpreted as an instruction
+to display program lines 20 to 50, inclusive.
+The command LIST -100 will show all program lines up to and including
+line 100.
+This peculiar behaviour is one reason that LIST might be prohibited
+from use within a program.
+In fact, Microsoft BASIC on the UK101 allows LIST within a program
+but fails to carry on executing the program after the listing has
+been completed (instead, it returns to command mode).
+<P>
 </P>
 <H2>Load/save mechanism</H2>
 <P>
