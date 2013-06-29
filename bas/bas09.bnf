@@ -1,0 +1,57 @@
+REM <text>
+GOTO <line_number>
+GOSUB <line_number>
+RETURN
+FOR <scalar_var> = <exp> TO <exp> [ STEP <exp> ]
+NEXT [ <scalar_var_name> ]
+IF <exp> THEN <line_number>
+IF <exp> THEN <statement>
+LET <var> = <exp>
+END
+STOP
+PRINT <list>
+INPUT <var> [, <var> ]
+READ <var> [, <var> ]
+RESTORE [ <line_number> ]
+DATA <numeric_const> [, <numeric_const> ]
+POKE <exp>, <exp>
+DIM <array_var_name> ( <integer_const> )
+RANDOMIZE
+ON <exp> GOTO <line_number> [, <line_number> ]
+ON <exp> GOSUB <line_number> [, <line_number> ]
+DEF FN<letter> [ ( <scalar_variable> ) ] = <exp>
+
+ANSI Minimal BASIC:
+
+OPTION BASE 0 | 1
+
+ANSI Full BASIC:
+EXIT DO
+EXIT FOR
+DO ... LOOP WHILE <exp>
+DO WHILE <exp> ... LOOP
+DO UNTIL <exp> ... LOOP
+DO ... LOOP
+SUB ... END SUB
+CALL <sub_name>
+SELECT CASE <exp> ... CASE <int_const> [, <int_const> ] ... CASE ELSE ... END SELECT
+<statement> ! <comment_text>
+OPTION ANGLE DEGREES | RADIANS
+OPTION ARITHMETIC DECIMAL | NATIVE | FIXED
+
+Line-Entry Time Errors
+Syntax errors
+Mismatched brackets/quotes
+
+Pre-Run Errors
+Undefined line number (GOTO or GOSUB)
+Mismatched FOR/NEXT
+Multiple DIM on same array
+Multiple DEF FN on same function
+
+Run-Time Errors
+Array bounds
+Division by zero
+Arithmetic (SQR (-1.0), TAN (90 deg))
+Uninitialised variable (scalar or array?)
+Out of DATA
