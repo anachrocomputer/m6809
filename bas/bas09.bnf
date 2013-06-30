@@ -1,29 +1,37 @@
-REM <text>
-GOTO <line_number>
-GOSUB <line_number>
 RETURN
-FOR <scalar_var> = <exp> TO <exp> [ STEP <exp> ]
-NEXT [ <scalar_var_name> ]
-IF <exp> THEN <line_number>
-IF <exp> THEN <statement>
-LET <var> = <exp>
 END
 STOP
-PRINT <list>
-INPUT <var> [, <var> ]
-READ <var> [, <var> ]
-RESTORE [ <line_number> ]
-DATA <numeric_const> [, <numeric_const> ]
-POKE <exp>, <exp>
-DIM <array_var_name> ( <integer_const> )
 RANDOMIZE
+REM <text>
+LET <var> = <exp>
+GOTO <line_number>
+GOSUB <line_number>
 ON <exp> GOTO <line_number> [, <line_number> ]
 ON <exp> GOSUB <line_number> [, <line_number> ]
-DEF FN<letter> [ ( <scalar_variable> ) ] = <exp>
+FOR <scalar_var> = <exp> TO <exp> [ STEP <exp> ]
+NEXT [ <scalar_var> ]
+IF <exp> THEN [ GOTO ] <line_number>
+IF <exp> THEN <statement>
+PRINT <list>
+INPUT [ <prompt> ] <var> [, <var> ]
+READ <var> [, <var> ]
+RESTORE [ <line_number> ]
+DATA <datum> [, <datum> ]
+POKE <exp>, <exp>
+DIM <array_var_name> '(' <integer_const> ')'
+DEF FN<fn_name> [ '(' <scalar_var> ')' ] = <exp>
 
 ANSI Minimal BASIC:
 
 OPTION BASE 0 | 1
+
+<var> ::= <array_var> | <scalar_var>
+<scalar_var> ::= <letter> [ <digit> ]
+<array_var> ::= <array_var_name> '(' <exp> ')'
+<array_var_name> ::= <letter>
+<fn_name> ::= <letter>
+
+GOTO and GOSUB may be written GO TO and GO SUB.
 
 ANSI Full BASIC:
 EXIT DO
