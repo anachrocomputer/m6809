@@ -537,19 +537,37 @@ PDUMP           jsr     findtop           ; Find the address of the sentinel
                 bra     dump1
 dump4           jsr     crlf
 dump1           pshs    d
-                tfr     y,d
+                tfr     y,d               ; Y holds address
                 jsr     hex4ou            ; Print address
                 puls    d
+                pshs    x,y               ; Save address in program mem
 dump2           jsr     space
                 lda     ,y+
                 jsr     hex2ou            ; Print bytes of program memory
+                leax    -1,x
+                cmpx    #0
+                beq     dump5
+                incb
+                andb    #$0f
+                beq     dump5             ; End of HEX row
+                bra     dump2
+dump5           puls    x,y               ; Now print in ASCII
+                ldb     #0                ; B reg counts bytes per row (0..15)
+                jsr     space
+dump6           lda     ,y+
+                cmpa    #128
+                bpl     dump8
+                cmpa    #' '
+                bpl     dump7
+dump8           lda     #'.'              ; Substitute for non-printable
+dump7           jsr     t1ou              ; Printable character
                 leax    -1,x
                 cmpx    #0
                 beq     dump3
                 incb
                 andb    #$0f
                 beq     dump4             ; Go back and print CR/LF and address
-                bra     dump2
+                bra     dump6
 dump3           jsr     crlf
                 rts
                 
