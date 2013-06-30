@@ -9,16 +9,20 @@
 16-bit limitation implies that I/O POKE addresses will be
 negative (like Apple ][).
 Would 32-bit integers be that much slower?
+ANSI Minimal BASIC has 6-digit floating point representation.
 Maybe have integer variables A% to Z% like BBC BASIC.
-The Resident Integer Variables are signed 32 bit values and
-are not cleared by RUN or even NEW (only a reset clears them).
+"The Resident Integer Variables are signed 32 bit values and
+are not cleared by RUN or even NEW (only a reset clears them)."
 These variables are at a fixed location in RAM and take up
 104 bytes (26 * 4).
 UK101 BASIC uses 32-bit floating point for variables.
-Two-character variable names.
+Two-character variable names (ANSI Minimal BASIC permits only letter
+plus optional digit for scalars, and one letter for arrays).
 Lowercase input legal but mapped to uppercase for output.
 Should we support strings?
 If so, how?
+ANSI Minimal BASIC disallows string expressions and string arrays
+altogther. Strings may be limited in length to as little as 18 chars.
 Need syntax for HEX constants (0x, $, &amp;, ?)
 DATA/RESTORE must accept a RESTORE&lt;line number&gt; format.
 Should we support a RANDOMIZE (or RANDOMISE) statement?
@@ -28,12 +32,14 @@ Multi-statement lines with colon ':'.
 WHILE/WEND loops.
 REPEAT/UNTIL loops.
 IF/THEN/ELSE is more tricky.
+ANSI Full BASIC has them, and a SELECT/CASE mechanism.
 Need some sort of escape to machine code.
 Add C-like binary operators for AND '&amp;' and OR '|'.
 What about C-like shift operators &lt;&lt; and &gt;&gt; like ARM BBC BASIC?
 Should there be a RENUMBER command (BBC BASIC has one)?
 What about AUTO line numbering (BBC BASIC has it)?
 Do we need TRON and TROFF for tracing?
+Should we have OPTION BASE, as ANSI Minimal BASIC does?
 Should the editor and tokeniser preserve indentation of
 source lines?
 What about spaces within source lines (delete them, add them or do nothing)?
@@ -49,6 +55,7 @@ syntax?
 <PRE>
 20 GOSUB 1000 ' Read input
 </PRE>
+ANSI Full BASIC uses the exclamation mark for in-line comments.
 </P>
 <H2>Source editor</H2>
 <P>
