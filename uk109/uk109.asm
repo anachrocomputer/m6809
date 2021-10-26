@@ -96,6 +96,9 @@ mattime         rmb     48                ; Current state of timer
 matcnt          rmb     48                ; Counter
 matstat         rmb     48                ; State for this column
 vdubuf          rmb     16*48             ; VDU save/restore buffer
+boxtladdr       rmb     2                 ; Box-drawing temporaries
+boxtraddr       rmb     2
+boxbladdr       rmb     2
 
 pad             equ     $ff               ; Padding unused EPROM space
 
@@ -999,10 +1002,19 @@ v1              inca                      ; Next ASCII character
                 jsr     getkey            ; Wait for a key press
                 ldx     #vdubuf           ; Restore VDU RAM
                 jmp     vdurestore        ; Put video RAM back again
+
 wcmd            lda     #1                ; X or column
                 ldb     #2                ; Y or row
                 ldx     #32               ; Width or ncols
                 ldy     #10               ; Height or nrows
+                ldu     #box3             ; Box-drawing char set
+                jsr     vdubox            ; Draw box on VDU
+                rts
+
+xcmd            lda     #8                ; X or column
+                ldb     #2                ; Y or row
+                ldx     #32               ; Width or ncols
+                ldy     #12               ; Height or nrows
                 ldu     #box1             ; Box-drawing char set
                 jsr     vdubox            ; Draw box on VDU
                 inca
@@ -1023,35 +1035,99 @@ wcmd            lda     #1                ; X or column
                 leay    -2,y
                 leau    8,u
                 jsr     vdubox            ; Draw box on VDU
+                inca
+                incb
+                leax    -2,x
+                leay    -2,y
+                leau    8,u
+                jsr     vdubox            ; Draw box on VDU
                 rts
-xcmd            rts
+
 ycmd            jsr     rnd16             ; Get a 16-bit random number
                 jsr     hex4ou
                 rts
 zcmd            jmp     matrixhack        ; Jump into other ROM
+
 ; VDUBOX --- draw box on the VDU
 ; Entry: A=col, B=row, X=ncols, Y=nrows, U=boxchars
 ; Exit:  registers unchanged
 vdubox          pshs    a,b,x,y,u         ; Save registers
                 clr     boxcol            ; Zero the high-order byte
-                sta     boxcol+1
-                clr     boxrow
+                sta     boxcol+1          ; Remember that the 6809
+                clr     boxrow            ; is big-endian
                 stb     boxrow+1
-;               stx     boxncols
-;               sty     boxnrows
+                stx     boxncols          ; X and Y are 16-bit anyway
+                sty     boxnrows
                 lda     #vramstride       ; VDU stride
                 mul
                 addd    #vram+lm          ; Add screen base address
                 addd    boxcol            ; Add column number
                 tfr     d,x               ; Address into X
+                stx     boxtladdr         ; Save for later
+                
+                ldb     boxrow+1          ; Get starting row
+                addb    boxnrows+1        ; Add box height (LSB only)
+                lda     #vramstride
+                mul
+                addd    #vram+lm          ; Add screen base address
+                addd    boxcol            ; Add column offset
+                tfr     d,y               ; Address of bottom row into Y
+                sty     boxbladdr         ; Save for later
+
                 lda     4,u               ; Get top-left char
                 sta     ,x                ; Store top left corner
+                lda     6,u               ; Get bottom-left char
+                sta     ,y                ; Store bottom-left corner
+
+                tfr     x,d               ; Address back into D
+                addd    boxncols          ; Add box width
+                tfr     d,x               ; Address back into X again
+                stx     boxtraddr         ; Save for later
+
+                tfr     y,d               ; Address back into D
+                addd    boxncols          ; Add box width
+                tfr     d,y               ; Address back into Y again
+
+                lda     5,u               ; Get top-right char
+                sta     ,x                ; Store top right corner
+                lda     7,u               ; Get bottom-right char
+                sta     ,y                ; Store bottom-right corner
+
+                ldx     boxtladdr         ; X points to top row
+                ldy     boxbladdr         ; Y points to bottom row
+                leax    1,x               ; Skip one byte
+                leay    1,y
+                ldb     boxncols+1        ; Loop counter
+                decb
+vbcols          lda     0,u               ; Get top row character
+                sta     ,x+               ; Store in top row
+                lda     1,u               ; Get bottom row character
+                sta     ,y+               ; Store in bottom row
+                decb
+                bne     vbcols
+
+                ldx     boxtladdr         ; X points to left column
+                ldy     boxtraddr         ; Y points to right column
+                leax    vramstride,x      ; Skip one row down
+                leay    vramstride,y
+                ldb     boxnrows+1        ; Loop counter
+                decb
+vbrows          lda     2,u               ; Get left col character
+                sta     ,x                ; Store in left column
+                lda     3,u               ; Get right col character
+                sta     ,y                ; Store in right column
+                leax    vramstride,x      ; Next row down
+                leay    vramstride,y
+                decb
+                bne     vbrows
+
                 puls    a,b,x,y,u,pc
                 
 box1            fcb     topch,botch,lftch,rghch,tlch,trch,blch,brch
 box2            fcb     blkch,blkch,blkch,blkch,blkch,blkch,blkch,blkch
-box3            fcb     chqch,chqch,chqch,chqch,chqch,chqch,chqch,chqch
-box4            fcb     $95,  $95,  $94,  $94,  blkch,blkch,blkch,blkch
+box3            fcb     blkch,chqch,lftch,chqch,$E9,  $08,  blch, $B0
+box4            fcb     $94,  $94,  $95,  $95,  $E8,  $E8,  $E8,  $E8
+box5            fcb     $83,  $84,  $8C,  $8B,  $CC,  $CD,  $CB,  $CE
 
 ;; PUTLIN_NS
 ;; Entry: X->string, U contains return address
