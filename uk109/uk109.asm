@@ -1,22 +1,24 @@
-; UK109.asm -- 6809 monitor ROM for UK101
-; Copyright (c) 2004 BJ, Froods Software Development
+; UK109.asm -- 6809 monitor ROM for UK101                      2004-10-13
+; Copyright (c) 2004 John Honniball, Froods Software Development
 
 ; Modification:
-; 13/10/2004 BJ  Initial coding
-; 14/10/2004 BJ  Added rudimentary 'vduchar' routine
-; 16/10/2004 BJ  Added ROM checksum
-; 17/10/2004 BJ  Added initial RAM test
-; 18/10/2004 BJ  Added 100us delay routine and keyboard polling
-; 21/10/2004 BJ  Improved keyboard polling, added cursor, VDU scrolling
-; 22/10/2004 BJ  Introduced hex monitor routines
-; 25/10/2004 BJ  Hex monitor '@' command
-; 27/10/2004 BJ  Added screen save/restore and random number generator
-; 27/10/2004 BJ  Added Matrix display hack
-; 15/03/2006 BJ  Changed reset message to reduce size of text in EPROM
-; 15/03/2006 BJ  Altered VDU code to use jump table
-; 23/03/2006 BJ  Added VDU test pattern
-; 17/01/2008 BJ  Fixed bug introduced by VDU jump table code
-; 01/02/2008 BJ  Split into two ROMs, one at $A000, other at $F800
+; 2004-10-13 JRH Initial coding
+; 2004-10-14 JRH Added rudimentary 'vduchar' routine
+; 2004-10-16 JRH Added ROM checksum
+; 2004-10-17 JRH Added initial RAM test
+; 2004-10-18 JRH Added 100us delay routine and keyboard polling
+; 2004-10-21 JRH Improved keyboard polling, added cursor, VDU scrolling
+; 2004-10-22 JRH Introduced hex monitor routines
+; 2004-10-25 JRH Hex monitor '@' command
+; 2004-10-27 JRH Added screen save/restore and random number generator
+; 2004-10-27 JRH Added Matrix display hack
+; 2006-03-15 JRH Changed reset message to reduce size of text in EPROM
+; 2006-03-15 JRH Altered VDU code to use jump table
+; 2006-03-23 JRH Added VDU test pattern
+; 2007-06-22 JRH Set up Subversion repository
+; 2008-01-17 JRH Fixed bug introduced by VDU jump table code
+; 2008-02-01 JRH Split into two ROMs, one at $A000, other at $F800
+; 2021-10-26 JRH Converted repo from Subversion to Git
 
 eos             equ     $00
 nul             equ     $00
@@ -738,7 +740,7 @@ monitor         lda     #'>'              ; Monitor command-level prompt
 ; Z - spare
 
                 org     monrom
-cmdtab          fdb     atcmd, acmd, bcmd
+cmdtab          fdb     atcmd, acmd, bcmd  ; Jump table for monitor commands
                 fdb     ccmd, dcmd, ecmd
                 fdb     fcmd, gcmd, hcmd 
                 fdb     icmd, jcmd, kcmd
@@ -748,7 +750,8 @@ cmdtab          fdb     atcmd, acmd, bcmd
                 fdb     ucmd, vcmd, wcmd
                 fdb     xcmd, ycmd, zcmd
 
-atcmd           jsr     hex4in            ; '@' command - open memory for editing
+; ATCMD --- monitor '@' command: open memory for editing
+atcmd           jsr     hex4in            ; Get starting address
                 tfr     d,x
 atcmd5          lda     #'='
                 jsr     vduchar
@@ -789,15 +792,22 @@ atcmd7          cmpa    #'"'              ; "->display as ASCII
 atcmd8          nop                       ; Test for hex here
 atcmdx          rts
                 
+; ACMD --- monitor 'A' command: print $5A as two-digit hex
 acmd            lda     #$5A
                 jsr     hex2ou
                 rts
+
+; BCMD --- monitor 'B' command: print $A5 as two-digit hex
 bcmd            lda     #$A5
                 jsr     hex2ou
                 rts
+
+; CCMD --- monitor 'C' command: print $BABE as four-digit hex
 ccmd            ldd     #$BABE
                 jsr     hex4ou
                 rts
+
+; DCMD --- monitor 'D' command: dump memory in hex (incomplete)
 dcmd            jsr     hex4in
                 tfr     d,x
                 jsr     crlf
@@ -813,15 +823,19 @@ dcmd2           jsr     hex1ou
                 tfr     x,d
                 jsr     hex4ou
                 rts
+
+; ECMD --- monitor 'E' command: print $DEAD as four-digit hex
 ecmd            ldd     #$DEAD
                 jsr     hex4ou
                 rts
+
+; FCMD --- monitor 'F' command: accept two hex digits, print them out again
 fcmd            jsr     hex2in
                 jsr     crlf
                 jsr     hex2ou
                 rts
 
-; Go
+; GCMD --- monitor 'G' command: go
 gcmd            jsr     hex4in            ; Get address
                 jsr     crlf
                 std     govec             ; Save address in RAM
@@ -857,6 +871,8 @@ gcmd            jsr     hex4in            ; Get address
                 stu     regu
                 sts     regs
                 rts
+
+; ICMD --- monitor 'I' command: 
 ;icmd            jsr     hex4in
 ;                tfr     d,x
 ;                lda     #','
@@ -871,6 +887,8 @@ gcmd            jsr     hex4in            ; Get address
 ;                jsr     hex2ou
 ;                jsr     space
 ;                rts
+
+; HCMD --- monitor 'H' command: help
 hcmd            ldx     #monmsg           ; Monitor help command
                 jsr     prtmsg
                 rts
@@ -886,53 +904,55 @@ qcmd
 scmd
 tcmd
 ucmd            rts
-; Register dump
+
+; RCMD --- monitor 'R' command: register dump
 rcmd            jsr     crlf
-                lda     rega
+                lda     rega               ; 6809 register A
                 ldb     #'A'
                 bsr     regprt2
-                lda     regb
+                lda     regb               ; 6809 register A
                 ldb     #'B'
                 bsr     regprt2
-;               lda     rege
+;               lda     rege               ; 6309 register E
 ;               ldb     #'E'
 ;               bsr     regprt2
-;               lda     regf
+;               lda     regf               ; 6309 register F
 ;               ldb     #'F'
 ;               bsr     regprt2
-                lda     #'C'
+                lda     #'C'               ; 6809 register CC
                 jsr     vduchar
                 lda     regcc
                 ldb     #'C'
                 bsr     regprt2
-                lda     #'D'
+                lda     #'D'               ; 6809 register DP
                 jsr     vduchar
                 lda     regdp
                 ldb     #'P'
                 bsr     regprt2
-;               lda     #'M'
+;               lda     #'M'               ; 6309 register MD
 ;               jsr     vduchar
 ;               lda     regmd
 ;               ldb     #'D'
 ;               bsr     regprt2
                 jsr     crlf
-                ldx     regx
+                ldx     regx               ; 6809 register X
                 lda     #'X'
                 bsr     regprt4
-                ldx     regy
+                ldx     regy               ; 6809 register Y
                 lda     #'Y'
                 bsr     regprt4
-                ldx     regu
+                ldx     regu               ; 6809 register U
                 lda     #'U'
                 bsr     regprt4
-                ldx     regs
+                ldx     regs               ; 6809 register S
                 lda     #'S'
                 bsr     regprt4
-;               ldx     regv
+;               ldx     regv               ; 6309 register V
 ;               lda     #'V'
 ;               bsr     regprt4
                 rts
                 
+; REGPRT2 --- print an 8-bit register value as two-digit hex
 regprt2         exg     a,b
                 jsr     vduchar
                 lda     #':'
@@ -941,6 +961,8 @@ regprt2         exg     a,b
                 jsr     hex2ou
                 jsr     space
                 rts
+
+; REGPRT2 --- print a 16-bit register value as four-digit hex
 regprt4         jsr     vduchar
                 lda     #':'
                 jsr     vduchar
@@ -948,11 +970,13 @@ regprt4         jsr     vduchar
                 jsr     hex4ou
                 jsr     space
                 rts
-;scmd            jsr     hex4in            ; Save
+
+; SCMD --- monitor 'S' command: save memory in Motorola S-Record format
+;scmd            jsr     hex4in            ; Get starting address
 ;                tfr     d,x
 ;                lda     #','
 ;                jsr     vduchar
-;                jsr     hex4in
+;                jsr     hex4in            ; Get ending address
 ;                tfr     d,y
 ;                jsr     crlf
 ;                ; Send S9 record
@@ -983,6 +1007,7 @@ regprt4         jsr     vduchar
 ;                stb     keymatrix         ; 5
 ;                bra     uhang             ; 3 Hang here
 
+; VCMD --- monitor 'V' command: show VDU character set
 vcmd            ldx     #vdubuf           ; Save VDU RAM
                 jsr     vdusave
                 lda     #ctrl_l           ; Clear the screen
@@ -1003,6 +1028,7 @@ v1              inca                      ; Next ASCII character
                 ldx     #vdubuf           ; Restore VDU RAM
                 jmp     vdurestore        ; Put video RAM back again
 
+; WCMD --- monitor 'W' command: draw a box on the VDU
 wcmd            lda     #1                ; X or column
                 ldb     #2                ; Y or row
                 ldx     #32               ; Width or ncols
@@ -1011,6 +1037,7 @@ wcmd            lda     #1                ; X or column
                 jsr     vdubox            ; Draw box on VDU
                 rts
 
+; XCMD --- monitor 'X' command: draw nested boxes on the VDU
 xcmd            lda     #8                ; X or column
                 ldb     #2                ; Y or row
                 ldx     #32               ; Width or ncols
@@ -1021,31 +1048,34 @@ xcmd            lda     #8                ; X or column
                 incb
                 leax    -2,x
                 leay    -2,y
-                leau    8,u
+                leau    8,u               ; Point to next block of 8 chars, i.e. box2
                 jsr     vdubox            ; Draw box on VDU
                 inca
                 incb
                 leax    -2,x
                 leay    -2,y
-                leau    8,u
+                leau    8,u               ; Point to next block of 8 chars, i.e. box3
                 jsr     vdubox            ; Draw box on VDU
                 inca
                 incb
                 leax    -2,x
                 leay    -2,y
-                leau    8,u
+                leau    8,u               ; Point to next block of 8 chars, i.e. box4
                 jsr     vdubox            ; Draw box on VDU
                 inca
                 incb
                 leax    -2,x
                 leay    -2,y
-                leau    8,u
+                leau    8,u               ; Point to next block of 8 chars, i.e. box5
                 jsr     vdubox            ; Draw box on VDU
                 rts
 
+; YCMD --- monitor 'Y' command: print a 16-bit random integer
 ycmd            jsr     rnd16             ; Get a 16-bit random number
                 jsr     hex4ou
                 rts
+
+; ZCMD --- monitor 'Z' command: start the Matrix display hack
 zcmd            jmp     matrixhack        ; Jump into other ROM
 
 ; VDUBOX --- draw box on the VDU
@@ -1123,6 +1153,7 @@ vbrows          lda     2,u               ; Get left col character
 
                 puls    a,b,x,y,u,pc
                 
+; Data for box-drawing tests ('X' command)
 box1            fcb     topch,botch,lftch,rghch,tlch,trch,blch,brch
 box2            fcb     blkch,blkch,blkch,blkch,blkch,blkch,blkch,blkch
 box3            fcb     blkch,chqch,lftch,chqch,$E9,  $08,  blch, $B0
