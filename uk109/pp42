@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-BAUD=9600
-PORT=/dev/ttyS1
+BAUD=19200
+PORT=/dev/ttyUSB0
 #
 stty -F $PORT $BAUD clocal -crtscts
 tr \\012 \\015 <$1.hex >$PORT
