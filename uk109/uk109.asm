@@ -57,6 +57,26 @@ rngseed1        equ     $c0
 rngseed2        equ     $ff
 rngseed3        equ     $ee
 
+pad             equ     $ff               ; Padding unused EPROM space
+
+; Hardware adresses
+ramtop          equ     $0fff             ; Last byte of 4K 2114 RAM
+vram            equ     $d000             ; UK101 video RAM
+botrow          equ     $d3c0             ; Address of bottom row of VDU
+vramsz          equ     $0400             ; 1k byte of video RAM
+vramstride      equ     64
+vdurows         equ     16                ; Number of VDU rows
+vducols         equ     48                ; Number of VDU columns
+lm              equ     13                ; VDU left margin
+keymatrix       equ     $df00             ; Keyboard matrix
+acias           equ     $f000             ; MC6850 ACIA status/control register
+aciad           equ     $f001             ; Data register
+
+basrom          equ     $a000             ; First BASIC ROM on UK101
+monrom          equ     $f800             ; Monitor ROM on UK101
+
+uk101reset      equ     $fe00             ; Traditional UK101 reset address
+
                 org     $0
 govec           rmb     2                 ; Address for 'Go' command
 rega            rmb     1                 ; Saved register contents
@@ -66,7 +86,7 @@ regf            rmb     1
 regcc           rmb     1
 regdp           rmb     1
 regmd           rmb     1
-                rmb     1
+                rmb     1                 ; Word alignment
 regv            rmb     2
 regx            rmb     2
 regy            rmb     2
@@ -83,69 +103,26 @@ outvec          rmb     2
 crsrrow         rmb     2
 crsrpos         rmb     1
 chunder         rmb     1                 ; Character under cursor
-boxcol          rmb     2                 ; Box-drawing temporaries
-boxrow          rmb     2
-boxncols        rmb     2
-boxnrows        rmb     2
 keydly          rmb     1
 prevscan        rmb     1                 ; Previous keyboard scan code
 freeram         rmb     1                 ; Beginning of free RAM
 rng1            rmb     1
 rng2            rmb     1
 rng3            rmb     1
-matdly          rmb     48                ; Delay in ms for this column
-mattime         rmb     48                ; Current state of timer
-matcnt          rmb     48                ; Counter
-matstat         rmb     48                ; State for this column
-vdubuf          rmb     16*48             ; VDU save/restore buffer
-boxtladdr       rmb     2                 ; Box-drawing temporaries
+matdly          rmb     vducols           ; Delay in ms for this column
+mattime         rmb     vducols           ; Current state of timer
+matcnt          rmb     vducols           ; Counter
+matstat         rmb     vducols           ; State for this column
+vdubuf          rmb     vducols*vdurows   ; VDU save/restore buffer
+boxcol          rmb     2                 ; Box-drawing temporaries
+boxrow          rmb     2
+boxncols        rmb     2
+boxnrows        rmb     2
+boxtladdr       rmb     2
 boxtraddr       rmb     2
 boxbladdr       rmb     2
 
-pad             equ     $ff               ; Padding unused EPROM space
-
-; Hardware adresses
-ramtop          equ     $0fff             ; Last byte of 4K 2114 RAM
-vram            equ     $d000             ; UK101 video RAM
-botrow          equ     $d3c0             ; Address of bottom row of VDU
-vramsz          equ     $0400             ; 1k byte of video RAM
-vramstride      equ     64
-vducols         equ     48                ; Number of VDU columns
-lm              equ     13                ; VDU left margin
-keymatrix       equ     $df00             ; Keyboard matrix
-acias           equ     $f000             ; MC6850 ACIA status/control register
-aciad           equ     $f001             ; Data register
-
-basrom          equ     $a000             ; First BASIC ROM on UK101
-monrom          equ     $f800             ; Monitor ROM on UK101
-
-uk101reset      equ     $fe00             ; Traditional UK101 reset address
-
                 org     basrom
-vduchar         pshs    b,x               ; Save B and X registers
-                ldb     crsrpos           ; Get cursor position
-                ldx     crsrrow           ; Get cursor row address
-                cmpa    #ctrl_o
-                bmi     ctrlch
-notctrl         sta     b,x               ; Put character in video RAM
-                incb                      ; Move cursor right
-                cmpb    #vducols          ; Test for right-hand margin
-                beq     vwrap             ; Wrap around to next line
-vdurtn          stb     crsrpos           ; Save updated cursor position
-                puls    b,x,pc            ; Restore B and X, then return
-                
-ctrlch          cmpa    #nul              ; Ignore NULs
-                beq     vdurtn
-                cmpa    #ctrl_g
-                bmi     notctrl           ; Wasn't a valid control character after all
-                pshs    a,y               ; Need to use A and Y so save 'em
-                suba    #ctrl_g           ; Subtract offset
-                asla                      ; Multiply by two
-                ldy     #vctrltab         ; Load pointer to subroutine table
-                jsr     [a,y]             ; Call cursor motion subroutine
-                puls    a,y               ; Restore A and Y registers
-                bra     vdurtn            ; Back to main VDU routine
-
 ; CRLF --- print CR and LF
 ; Entry: no parameters
 ; Exit:  registers unchanged
@@ -172,6 +149,33 @@ prtmsg1         lda     ,x+
                 bsr     vduchar
                 bra     prtmsg1
 prtmsg2         puls    a,x,pc            ; Restore A and X, then return
+
+; VDUCHAR --- print a single character to the VDU, allowing for cursor movement
+; Entry: char to be printed in A
+; Exit: registers unchanged
+vduchar         pshs    b,x               ; Save B and X registers
+                ldb     crsrpos           ; Get cursor position
+                ldx     crsrrow           ; Get cursor row address
+                cmpa    #ctrl_o
+                bmi     ctrlch
+notctrl         sta     b,x               ; Put character in video RAM
+                incb                      ; Move cursor right
+                cmpb    #vducols          ; Test for right-hand margin
+                beq     vwrap             ; Wrap around to next line
+vdurtn          stb     crsrpos           ; Save updated cursor position
+                puls    b,x,pc            ; Restore B and X, then return
+                
+ctrlch          cmpa    #nul              ; Ignore NULs
+                beq     vdurtn
+                cmpa    #ctrl_g
+                bmi     notctrl           ; Wasn't a valid control character after all
+                pshs    a,y               ; Need to use A and Y so save 'em
+                suba    #ctrl_g           ; Subtract offset
+                asla                      ; Multiply by two
+                ldy     #vctrltab         ; Load pointer to subroutine table
+                jsr     [a,y]             ; Call cursor motion subroutine
+                puls    a,y               ; Restore A and Y registers
+                bra     vdurtn            ; Back to main VDU routine
 
 ; VDU control character handling routines
 vwrap           bsr     vctrl_m           ; Emulate CR/LF
@@ -637,7 +641,7 @@ matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
 rstmsg          fcb     lf,ctrl_i
                 fcc     'UK109 (6809 CPU) V0.3'
                 fcb     cr,lf,ctrl_i
-                fcc     'Copyright (c) 2004-2008'
+                fcc     'Copyright (c) 2004-2021'
                 fcb     cr,lf
                 fcb     eos
 
@@ -690,15 +694,32 @@ scantab         fcb     NKY               ; Skip zeroth index
                 fcb     '8'+N,'9'+N,'0',  ':'+N,'-'+N,del,  NKY,  NKY ; 41-48
                 fcb     '1'+N,'2'+N,'3'+N,'4'+N,'5'+N,'6'+N,'7'+N,NKY ; 49-56
 
-; Monitor command interpreter
-cmderr          lda     #'?'
+; Monitor entry point
+monitor         clra                      ; Clear all the saved registers
+                clrb                      ; so that they're not just random
+                sta     rega              ; values if we type 'r' before
+                stb     regb              ; we've used 'g'.
+                sta     rege
+                sta     regf
+                sta     regcc
+                sta     regdp
+                sta     regmd
+                std     regv
+                std     regx
+                std     regy
+                std     regu
+                std     regs
+                ldx     #monmsg           ; Monitor sign-on message
+                jsr     prtmsg
+                bra     moncmd
+cmderr          lda     #'?'              ; Unrecognised command
                 jsr     vduchar
                 jsr     crlf
-monitor         lda     #'>'              ; Monitor command-level prompt
+moncmd          lda     #'>'              ; Monitor command-level prompt
                 jsr     vduchar
                 jsr     getchar           ; Read command letter from user
-                jsr     vduchar
-                jsr     toupper
+                jsr     vduchar           ; Echo
+                jsr     toupper           ; Convert to upper case
                 cmpa    #'@'
                 blo     cmderr
                 cmpa    #'Z'
@@ -706,9 +727,11 @@ monitor         lda     #'>'              ; Monitor command-level prompt
                 suba    #'@'
                 asla
                 ldx     #cmdtab
-                jsr     [a,x]
+                jsr     [a,x]             ; Call monitor command routine
                 jsr     crlf
-                bra     monitor
+                bra     moncmd
+                
+; End of code in the 2k EPROM located at 'basrom'
 
 ; UK101 Monitor command routines
 ; @ - open memory for editing
@@ -1457,7 +1480,7 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
                 stx     irqvec
                 stx     firqvec
                 stx     nmivec
-                ldx     #jsrrtn
+                ldx     #jsrrtn           ; Initialise I/O vector table
                 stx     outvec
 
 ; TODO: More hardware initialisation, hardware self-tests
@@ -1473,17 +1496,11 @@ addone          ldx     #intrtn           ; Initialise interrupt vector table
                 
                 jmp     monitor           ; Jump into other ROM
                 
-;loop            jsr     getchar           ; Get a keystroke
-;                jsr     hex2ou            ; Print ASCII code in hex
-;                pshs    a
-;                lda     #$20
-;                jsr     vduchar
-;                puls    a
-;                jsr     vduchar
-;                lda     #$20
-;                jsr     vduchar
-;                bra     loop
-                
+intrtn          rti
+jsrrtn          rts
+
+                org     $ffb0
+; Interrupt jump table
 illjmp          jmp     [illvec]          ; Table of indirect jumps to ISRs
 swi3jmp         jmp     [swi3vec]
 swi2jmp         jmp     [swi2vec]
@@ -1491,14 +1508,16 @@ swijmp          jmp     [swivec]
 irqjmp          jmp     [irqvec]
 firqjmp         jmp     [firqvec]
 nmijmp          jmp     [nmivec]
-intrtn          rti
-jsrrtn          rts
-
-                org     $ffe0
+; I/O jump table
 outchar         jmp     [outvec]          ; A few placeholders for
                 jmp     [outvec]          ; future use.  Note that jump
                 jmp     [outvec]          ; indirect on the 6809 is
                 jmp     [outvec]          ; four bytes long
+                jmp     [outvec]
+                jmp     [outvec]
+                jmp     [outvec]
+                jmp     [outvec]
+                jmp     [outvec]
 ; ROM vectors
 ill             fdb     illjmp            ; Reserved by Motorola
 swi3            fdb     swi3jmp
