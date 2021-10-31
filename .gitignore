@@ -1,3 +1,6 @@
 *.o
 *.hex
 *.lst
+asm/as6809
+bas/*.out
+sim/sim6809
