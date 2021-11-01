@@ -27,11 +27,11 @@ We'll need the macro packages for 'groff':
 
 Then, to see the documentation formatted for the screen:
 
-`groff -mm -Tascii base.doc | more`
-`groff -mm -Tascii as6809.doc | more`
-`groff -man -Tascii as6809.1 | more`
+`groff -mm -Tascii base.doc | more` <br />
+`groff -mm -Tascii as6809.doc | more` <br />
+`groff -man -Tascii as6809.1 | more` <br />
 
 Try these for HTML or PDF:
 
-`groff -mm -Tpdf base.doc >base.pdf`
-`groff -mm -Tpdf base.html >base.html`
+`groff -mm -Tpdf base.doc >base.pdf` <br />
+`groff -mm -Thtml base.doc >base.html` <br />
