@@ -4,9 +4,9 @@ The Frankenstein Assembler for the 6809.
 Needs updating for modern Linux systems which no longer have /usr/tmp.
 Probably needs other updating too.
 
-## Building the program ##
+## Building the Program ##
 
-We will need the basic compiler, inker and libraries:
+We will need the C compiler, linker and libraries:
 
 `sudo apt-get install build-essential`
 
