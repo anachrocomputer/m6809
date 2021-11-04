@@ -1,5 +1,5 @@
-; bas09 --- BASIC for the 6809
-; Copyright (c) 2006 BJ, Froods Software Development
+; bas09 --- BASIC for the 6809                                 2006-00-00
+; Copyright (c) 2006 John Honniball, Froods Software Development
 
 ; Will need three "methods" for each keyword:
 ;  Run, List, Tokenise

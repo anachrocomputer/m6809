@@ -12,8 +12,9 @@ Probably needs other updating too.
 ## bas ##
 
 BASIC interpreter for the 6809.
-Inspired by P. J. Brown's Writing Interactive Compilers and Interpreters (1979)
-but far from finished.
+Inspired by P. J. Brown's
+*Writing Interactive Compilers and Interpreters*
+(1979) but far from finished.
 
 ## doc ##
 
