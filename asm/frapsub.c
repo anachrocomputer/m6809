@@ -28,6 +28,13 @@ AUTHORS: 	Mark Zenier;
 
 #define STRALLOCSZ 4096
 
+void polout();
+int opcodehash();
+int pepolcon();
+extern void frafatal();
+extern void fraerror();
+extern void fracherror();
+
 	local char *currstr;
 
 char * savestring(stx, len)
@@ -83,7 +90,7 @@ local int nextenode = 1;
 int nextexprs = 0;
 int nextstrs = 0;
 
-clrexpr()
+void clrexpr()
 /*
 	description	clear out the stuff used for each line
 			the temporary string pool
@@ -95,7 +102,7 @@ clrexpr()
 	nextexprs = nextstrs = 0;
 }
 
-exprnode(swact, left, op, right, value, symbol)
+int exprnode(swact, left, op, right, value, symbol)
 	int swact, left, op, right;
 	long value;
 	struct symel * symbol;
@@ -300,7 +307,7 @@ void reservedsym(str, tok, value)
 
 }
 
-buildsymbolindex()
+void buildsymbolindex()
 /*
 	description	allocate and fill an array that points to each
 			nonreserved symbol table element, used to reference
@@ -339,7 +346,7 @@ buildsymbolindex()
 
 local int ohashtab[OPHASHSZ];
 
-setophash()
+void setophash()
 /*
 	description	set up the linked list hash table for the
 			opcode symbols 
@@ -483,7 +490,7 @@ char * findgen(op, syntax, crit)
 }
 
 
-genlocrec(seg, loc)
+void genlocrec(seg, loc)
 	int seg;
 	long loc;
 /*
@@ -521,7 +528,7 @@ void goutch(ch)
 }
 
 
-gout2hex(inv)
+void gout2hex(inv)
 	int inv;
 /*
 	description	output to the 'D' buffer, a byte in ascii hexidecimal
@@ -532,7 +539,7 @@ gout2hex(inv)
 }
 
 
-goutxnum(num)
+void goutxnum(num)
 	unsigned long num;
 /*
 	description	output to the 'D' record buffer a long integer in
@@ -936,7 +943,7 @@ static long etop;
 static int	etopseg;
 #define STACKALLOWANCE 4 /* number of level used outside polish expr */
 
-pevalexpr(sub, exn)
+void pevalexpr(sub, exn)
 	int sub, exn;
 /*
 	description	evaluate and save the results of an expression tree
@@ -971,7 +978,7 @@ pevalexpr(sub, exn)
 	}
 }
 
-polout(ch)
+void polout(ch)
 	char ch;
 /*
 	description	output a character to a evar[?].exprstr array
@@ -990,7 +997,7 @@ polout(ch)
 	}
 }
 
-polnumout(inv)
+void polnumout(inv)
 	unsigned long inv;
 /*
 	description	output a long constant to a polish expression
@@ -1001,7 +1008,7 @@ polnumout(inv)
 	polout(hexch((int) inv ));
 }
 
-pepolcon(esub)
+int pepolcon(esub)
 	int esub;
 /*
 	description	convert an expression tree to polish notation

@@ -48,13 +48,20 @@ int listflag = FALSE;
 static int Debugmode = FALSE;
 char hexcva[17] = "0123456789ABCDEF";
 
-static printsymbols(FILE *fp);
-static filesymbols(FILE *fp);
+int cpumatch();
+void fraerror();
+void outphase();
+void setophash();
+void setreserved();
+void buildsymbolindex();
+int yyparse();
+static void printsymbols(FILE *fp);
+static void filesymbols(FILE *fp);
 
 #ifdef NOGETOPT
 #include "getopt.h"
 #endif
-main(argc, argv)
+int main(argc, argv)
 	int argc;
 	char *(argv[]);
 /*
@@ -273,7 +280,7 @@ main(argc, argv)
 }
 		
 
-frafatal(str)
+void frafatal(str)
 	char * str;
 /*
 	description	Fatal error subroutine, shutdown and quit right now!
@@ -294,7 +301,7 @@ frafatal(str)
 	exit(2);
 }
 
-frawarn(str)
+void frawarn(str)
 	char * str;
 /*
 	description	first pass - generate warning message by writing line
@@ -307,7 +314,7 @@ frawarn(str)
 	warncnt++;
 }
 
-fraerror(str)
+void fraerror(str)
 	char * str;
 /*
 	description	first pass - generate error message by writing line to
@@ -320,7 +327,7 @@ fraerror(str)
 	errorcnt++;
 }
 
-fracherror(str, start, beyond)
+void fracherror(str, start, beyond)
 	char * str, *start, *beyond;
 /*
 	description	first pass - generate error message by writing line to
@@ -345,7 +352,7 @@ fracherror(str, start, beyond)
 }
 
 
-prtequvalue(lv)
+void prtequvalue(lv)
 	long lv;
 /*
 	description	first pass - generate comment lines in intermediate file
@@ -361,7 +368,7 @@ prtequvalue(lv)
 
 #define SYMPERLINE 3
 
-static printsymbols(FILE *fp)
+static void printsymbols(FILE *fp)
 /*
 	description	print the symbols on the listing file, 3 symbols
 			across.  Only the first 15 characters are printed
@@ -398,7 +405,7 @@ static printsymbols(FILE *fp)
 }
 
 
-static filesymbols(FILE *fp)
+static void filesymbols(FILE *fp)
 /*
 	description	print the symbols to the symbol table file
 	globals		the symbol index array and the symbol table elements.

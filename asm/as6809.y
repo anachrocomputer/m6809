@@ -132,6 +132,18 @@ COMPILERS: 	Microport Sys V/AT, ATT Yacc, Turbo C V1.5, Bison (CUG disk 285)
 #define	PPOSTU	(0x40|REGBUSTK)
 #define	PPOSTPC	0x80
 
+	void yyerror();
+	int yylex();
+	void frawarn();
+	void fraerror();
+	void fracherror();
+	void clrexpr();
+	void pevalexpr();
+	void genlocrec();
+	int exprnode();
+	int genstring();
+	int geninstr();
+	void prtequvalue();
 	long	labelloc;
 	static int satsub;
 	int	ifstkpt = 0;
@@ -1118,7 +1130,7 @@ expr	:	'+' expr %prec KEOP_MUN
 
 %%
 
-lexintercept()
+int lexintercept()
 /*
 	description	intercept the call to yylex (the lexical analyzer)
 			and filter out all unnecessary tokens when skipping
@@ -1128,6 +1140,7 @@ lexintercept()
 */
 {
 #undef yylex
+	int yylex();
 
 	int rv;
 
@@ -1158,7 +1171,7 @@ lexintercept()
 
 
 
-setreserved()
+void setreserved()
 {
 
 	reservedsym("and", KEOP_AND, 0);
@@ -1219,7 +1232,7 @@ setreserved()
 	reservedsym("PCR", PCRELATIVE, 0);
 }
 
-cpumatch(str)
+int cpumatch(str)
 	char * str;
 {
 	return TRUE;

@@ -37,6 +37,10 @@ int linenumber = 0;
 char lineLbuff[INBUFFSZ];
 int lineLflag = FALSE;
 
+void frp2warn();
+void frp2undef();
+void frp2error();
+
 static unsigned char	outresult[OUTRESULTLEN];
 static int	nextresult;
 static long 	genlocctr, resultloc;
@@ -726,7 +730,7 @@ static void intelout(type, addr, count, data)
 }
 
 
-frp2undef(symp)
+void frp2undef(symp)
 	struct symel * symp;
 /*
 	description	second pass - print undefined symbol error message on
@@ -750,7 +754,7 @@ frp2undef(symp)
 	errorcnt++;
 }
 
-frp2warn(str)
+void frp2warn(str)
 	char * str;
 /*
 	description	second pass - print a warning message on the listing
@@ -773,7 +777,7 @@ frp2warn(str)
 }
 
 
-frp2error(str)
+void frp2error(str)
 	char * str;
 /*
 	description	second pass - print a message on the listing file

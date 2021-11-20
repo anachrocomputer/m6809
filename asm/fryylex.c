@@ -39,6 +39,8 @@ COMPILERS: 	Microport Sys V/AT, ATT Yacc, Turbo C V1.5, Bison (CUG disk 285)
 #define DEBUG 0
 #endif
 
+	extern int findop();
+	extern void fraerror();
 	extern YYSTYPE yylval; 
 
 	enum symflag {Symopcode, Symsym} whichsym = Symopcode;
@@ -52,7 +54,7 @@ COMPILERS: 	Microport Sys V/AT, ATT Yacc, Turbo C V1.5, Bison (CUG disk 285)
 	enum readacts nextreadact = Nra_normal;
 
 
-frareadrec()
+int frareadrec()
 /*
 	description	read a line, on end of file, pop the include file
 			stack.
@@ -1000,7 +1002,7 @@ int yylex()
 }
 
 
-yyerror(str)
+void yyerror(str)
 	char *str;
 /*	
 	description	first pass - output a parser error to intermediate file
