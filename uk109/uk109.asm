@@ -20,6 +20,8 @@
 ; 2008-02-01 JRH Split into two ROMs, one at $A000, other at $F800
 ; 2021-10-26 JRH Converted repo from Subversion to Git
 
+HD6309          equ     1
+
 eos             equ     $00
 nul             equ     $00
 cr              equ     $0d
@@ -639,7 +641,11 @@ matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
 
 ; Various message strings
 rstmsg          fcb     lf,ctrl_i
+ if HD6309 eq 1
+                fcc     'UK109 (6309 CPU) V0.3'
+ else
                 fcc     'UK109 (6809 CPU) V0.3'
+ endi
                 fcb     cr,lf,ctrl_i
                 fcc     'Copyright (c) 2004-2021'
                 fcb     cr,lf
@@ -864,12 +870,14 @@ gcmd            jsr     hex4in            ; Get address
                 std     govec             ; Save address in RAM
                 lda     rega              ; Load up all registers from RAM
                 ldb     regb
-;               fcb     $11,$b6           ; lde rege
-;               fdb     rege
-;               fcb     $11,$f6           ; ldf regf
-;               fdb     regf
-;               ldx     regv
-;               fcb     $1f,$17           ; tfr x,v Can't load V directly
+ if HD6309 eq 1
+                fcb     $11,$b6           ; lde rege
+                fdb     rege
+                fcb     $11,$f6           ; ldf regf
+                fdb     regf
+                ldx     regv
+                fcb     $1f,$17           ; tfr x,v Can't load V directly
+ endi
                 ldx     regx
                 ldy     regy
                 ldu     regu
@@ -881,15 +889,19 @@ gcmd            jsr     hex4in            ; Get address
                 sta     regcc
                 tfr     dp,a              ; Can't store DP directly
                 sta     regdp
+ if HD6309 eq 1
 ;               tfr     md,a              ; Can't store MD directly
 ;               sta     regmd
-;               fcb     $11,$b7           ; ste rege
-;               fdb     rege
-;               fcb     $11,$f7           ; stf regf
-;               fdb     regf
+                fcb     $11,$b7           ; ste rege
+                fdb     rege
+                fcb     $11,$f7           ; stf regf
+                fdb     regf
+ endi
                 stx     regx
-;               fcb     $1f,$71           ; tfr v,x Can't store V directly
-;               stx     regv
+ if HD6309 eq 1
+                fcb     $1f,$71           ; tfr v,x Can't store V directly
+                stx     regv
+ endi
                 sty     regy
                 stu     regu
                 sts     regs
@@ -936,12 +948,14 @@ rcmd            jsr     crlf
                 lda     regb               ; 6809 register A
                 ldb     #'B'
                 bsr     regprt2
-;               lda     rege               ; 6309 register E
-;               ldb     #'E'
-;               bsr     regprt2
-;               lda     regf               ; 6309 register F
-;               ldb     #'F'
-;               bsr     regprt2
+ if HD6309 eq 1
+                lda     rege               ; 6309 register E
+                ldb     #'E'
+                bsr     regprt2
+                lda     regf               ; 6309 register F
+                ldb     #'F'
+                bsr     regprt2
+ endi
                 lda     #'C'               ; 6809 register CC
                 jsr     vduchar
                 lda     regcc
@@ -952,11 +966,13 @@ rcmd            jsr     crlf
                 lda     regdp
                 ldb     #'P'
                 bsr     regprt2
-;               lda     #'M'               ; 6309 register MD
-;               jsr     vduchar
-;               lda     regmd
-;               ldb     #'D'
-;               bsr     regprt2
+ if HD6309 eq 1
+                lda     #'M'               ; 6309 register MD
+                jsr     vduchar
+                lda     regmd
+                ldb     #'D'
+                bsr     regprt2
+ endi
                 jsr     crlf
                 ldx     regx               ; 6809 register X
                 lda     #'X'
@@ -970,9 +986,11 @@ rcmd            jsr     crlf
                 ldx     regs               ; 6809 register S
                 lda     #'S'
                 bsr     regprt4
-;               ldx     regv               ; 6309 register V
-;               lda     #'V'
-;               bsr     regprt4
+ if HD6309 eq 1
+                ldx     regv               ; 6309 register V
+                lda     #'V'
+                bsr     regprt4
+ endi
                 rts
                 
 ; REGPRT2 --- print an 8-bit register value as two-digit hex
@@ -1197,7 +1215,9 @@ box5            fcb     $83,  $84,  $8C,  $8B,  $CC,  $CD,  $CB,  $CE
                 org     uk101reset
 reset           orcc    #%01010000        ; Disable interrupts
                 lds     #ramtop           ; Set up initial stack pointer
-;               fcb     $11,$3d,$01       ; ldmd #$01 Into 6309 mode
+ if HD6309 eq 1
+                fcb     $11,$3d,$01       ; ldmd #$01 Into 6309 mode
+ endi
                 clra
                 clrb
                 tfr     d,x
