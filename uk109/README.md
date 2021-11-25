@@ -16,3 +16,65 @@ Stag PPZ failed some time ago), burn some EPROMs, and run them on
 real hardware.
 Then, I can think about writing new 6809 code.
 
+## 6809 and 6309 ##
+
+The CPU chip in my modified Compukit UK101 is actually a Hitachi
+HD6309.
+This chip has additional registers and an enhanced instruction set
+compared to the original Motorola M6809.
+
+In the source code,
+we have a symbol 'HD6309' which can be set to '1' to enable some extra
+code for the HD6309 CPU.
+The conditional assembly directives are slightly different for the
+two assemblers that are supported.
+
+Because only one assembler supports HD6309 instructions,
+I've coded them in the form of FCB and FDB directives.
+Later, I'll change that and assemble using only the 6309 assembler.
+
+## Building the Assemblers ##
+
+We have two choices for a 6809 assembler: the Frankenstein
+Assembler and the 'asm6809' assembler from http://6809.org.uk.
+
+The Frankenstein Assembler is included in this repo,
+and can be built from the source code by following the instructions
+in the README file in the subdirectory 'asm'.
+
+The 'asm6809' assembler is a much more modern program and also has the
+advantage that it can assemble HD6309 instructions.
+To build it, first clone the repo:
+
+```git clone https://www.6809.org.uk/git/asm6809.git```
+
+giving you a new subdirectory:
+
+```cd asm6809```
+
+You'll need the 'autoconf' tools:
+
+```sudo apt-get install autoconf```
+
+Then, run the autoconfigure step:
+
+```./autogen.sh```
+
+Next, configure the code:
+
+```./configure```
+
+Finally, run 'make':
+
+```make```
+
+and you should have an executable file in ```src/asm6809```.
+Copy that into a directory which is on your path,
+usually ```~/bin```.
+
+## Building the Compukit Code ##
+
+The ```Makefile``` has two targets and a ```sed``` command to convert
+the conditional assembly directives from one assembler to the other.
+The two resulting Intel HEX files should be identical.
+The Motorola S-Record file should be equivalent.

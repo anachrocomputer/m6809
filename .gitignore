@@ -1,5 +1,6 @@
 *.o
 *.hex
+*.srec
 *.lst
 asm/as6809
 bas/*.out
