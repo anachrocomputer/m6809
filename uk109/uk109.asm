@@ -642,23 +642,23 @@ matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
 ; Various message strings
 rstmsg          fcb     lf,ctrl_i
  if HD6309 eq 1
-                fcc     'UK109 (6309 CPU) V0.3'
+                fcc     "UK109 (6309 CPU) V0.3"
  else
-                fcc     'UK109 (6809 CPU) V0.3'
+                fcc     "UK109 (6809 CPU) V0.3"
  endi
                 fcb     cr,lf,ctrl_i
-                fcc     'Copyright (c) 2004-2021'
+                fcc     "Copyright (c) 2004-2021"
                 fcb     cr,lf
                 fcb     eos
 
 romokmsg        fcb     ctrl_i
-                fcc     'ROM checksum OK'
+                fcc     "ROM checksum OK"
                 fcb     eos
 romerrmsg       fcb     ctrl_i
-                fcc     'ROM checksum error,'
+                fcc     "ROM checksum error,"
                 fcb     eos
 memokmsg        fcb     ctrl_i
-                fcc     'Memory OK'
+                fcc     "Memory OK"
                 fcb     eos
 memfail1        fcb     ctrl_i
                 fcc     "RAM fail1 at $"
@@ -671,21 +671,21 @@ expmsg          fcc     " expected $"
 readmsg         fcc     ", read $"
                 fcb     eos
                 
-adrokmsg        fcc     'Memory Addressing OK'
+adrokmsg        fcc     "Memory Addressing OK"
                 fcb     cr,lf,eos
 
-adrerrmsg       fcc     'Memory Addressing FAIL'
+adrerrmsg       fcc     "Memory Addressing FAIL"
                 fcb     cr,lf,eos
                 
 kberrmsg        fcb     ctrl_i
-                fcc     'Keyboard FAIL'
+                fcc     "Keyboard FAIL"
                 fcb     cr,lf,eos
 
 kbokmsg         fcb     ctrl_i
-                fcc     'Keyboard OK'
+                fcc     "Keyboard OK"
                 fcb     cr,lf,eos
 
-monmsg          fcc     'UK109 Machine Code Monitor'
+monmsg          fcc     "UK109 Machine Code Monitor"
                 fcb     cr,lf,eos
 
 N               equ     $80                      
