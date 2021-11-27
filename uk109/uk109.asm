@@ -19,6 +19,7 @@
 ; 2008-01-17 JRH Fixed bug introduced by VDU jump table code
 ; 2008-02-01 JRH Split into two ROMs, one at $A000, other at $F800
 ; 2021-10-26 JRH Converted repo from Subversion to Git
+; 2021-11-27 JRH Introduced HD6309 assembler 'asm6809'
 
 HD6309          equ     1
 
@@ -124,6 +125,7 @@ boxtladdr       rmb     2
 boxtraddr       rmb     2
 boxbladdr       rmb     2
 
+                setdp   0
                 org     basrom
 ; CRLF --- print CR and LF
 ; Entry: no parameters
@@ -212,26 +214,49 @@ vctrl_j         cmpx    #botrow           ; CTRL_J: cursor down/scroll up
                 leax    vramstride,x      ; Simply move the cursor down
                 stx     crsrrow
                 rts
-scroll          pshs    a,b,x,y,u
+ if HD6309
+scroll          pshs    b,x,y             ; Save registers
+                pshsw
+ else
+scroll          pshs    a,b,x,y,u         ; Save registers
+ endif
                 ldx     #vram+vramstride+lm
                 ldy     #vram+lm
                 ldb     #15
-scrlrow         lda     #24               ; vducols / 2
+ if HD6309
+scrlrow         ldw     #vducols
+                tfm     x+,y+             ; Load lower row, store upper row
+ else
+scrlrow         lda     #vducols / 2
 scrlch          ldu     ,x++              ; Load from lower row...
                 stu     ,y++              ; Store into upper row
                 deca
                 bne     scrlch
+ endif
                 leax    16,x
                 leay    16,y
                 decb
                 bne     scrlrow
                 ldx     #botrow+lm        ; Clear bottom row
+ if HD6309
+                ldy     #aspace           ; Y->space character
+                ldw     #vducols
+                tfm     y,x+
+ else
                 ldu     #$2020            ; Two ASCII spaces
-                lda     #24               ; vducols / 2
+                lda     #vducols / 2
 clrrow          stu     ,x++
                 deca
                 bne     clrrow
+ endif
+                
+ if HD6309
+                pulsw
+                puls    b,x,y,pc          ; Restore registers and return
+aspace          fcc     " "               ; A single ASCII space
+ else
                 puls    a,b,x,y,u,pc      ; Restore registers and return
+ endif
 
 vctrl_k         leax    -vramstride,x     ; CTRL_K: cursor up
                 stx     crsrrow
@@ -641,11 +666,11 @@ matsyms         fcb     02,03,04,09,11,12,24,25,26,27,28,29,30,31,33,34
 
 ; Various message strings
 rstmsg          fcb     lf,ctrl_i
- if HD6309 eq 1
+ if HD6309
                 fcc     "UK109 (6309 CPU) V0.3"
  else
                 fcc     "UK109 (6809 CPU) V0.3"
- endi
+ endif
                 fcb     cr,lf,ctrl_i
                 fcc     "Copyright (c) 2004-2021"
                 fcb     cr,lf
@@ -870,14 +895,12 @@ gcmd            jsr     hex4in            ; Get address
                 std     govec             ; Save address in RAM
                 lda     rega              ; Load up all registers from RAM
                 ldb     regb
- if HD6309 eq 1
-                fcb     $11,$b6           ; lde rege
-                fdb     rege
-                fcb     $11,$f6           ; ldf regf
-                fdb     regf
+ if HD6309
+                lde     rege
+                ldf     regf
                 ldx     regv
-                fcb     $1f,$17           ; tfr x,v Can't load V directly
- endi
+                tfr     x,v               ; Can't load V directly
+ endif
                 ldx     regx
                 ldy     regy
                 ldu     regu
@@ -889,19 +912,15 @@ gcmd            jsr     hex4in            ; Get address
                 sta     regcc
                 tfr     dp,a              ; Can't store DP directly
                 sta     regdp
- if HD6309 eq 1
-;               tfr     md,a              ; Can't store MD directly
-;               sta     regmd
-                fcb     $11,$b7           ; ste rege
-                fdb     rege
-                fcb     $11,$f7           ; stf regf
-                fdb     regf
- endi
+ if HD6309
+                ste     rege
+                stf     regf
+ endif
                 stx     regx
- if HD6309 eq 1
-                fcb     $1f,$71           ; tfr v,x Can't store V directly
+ if HD6309
+                tfr     v,x               ; Can't store V directly
                 stx     regv
- endi
+ endif
                 sty     regy
                 stu     regu
                 sts     regs
@@ -948,14 +967,14 @@ rcmd            jsr     crlf
                 lda     regb               ; 6809 register A
                 ldb     #'B'
                 bsr     regprt2
- if HD6309 eq 1
+ if HD6309
                 lda     rege               ; 6309 register E
                 ldb     #'E'
                 bsr     regprt2
                 lda     regf               ; 6309 register F
                 ldb     #'F'
                 bsr     regprt2
- endi
+ endif
                 lda     #'C'               ; 6809 register CC
                 jsr     vduchar
                 lda     regcc
@@ -966,13 +985,13 @@ rcmd            jsr     crlf
                 lda     regdp
                 ldb     #'P'
                 bsr     regprt2
- if HD6309 eq 1
+ if HD6309
                 lda     #'M'               ; 6309 register MD
                 jsr     vduchar
                 lda     regmd
                 ldb     #'D'
                 bsr     regprt2
- endi
+ endif
                 jsr     crlf
                 ldx     regx               ; 6809 register X
                 lda     #'X'
@@ -986,11 +1005,11 @@ rcmd            jsr     crlf
                 ldx     regs               ; 6809 register S
                 lda     #'S'
                 bsr     regprt4
- if HD6309 eq 1
+ if HD6309
                 ldx     regv               ; 6309 register V
                 lda     #'V'
                 bsr     regprt4
- endi
+ endif
                 rts
                 
 ; REGPRT2 --- print an 8-bit register value as two-digit hex
@@ -1215,9 +1234,9 @@ box5            fcb     $83,  $84,  $8C,  $8B,  $CC,  $CD,  $CB,  $CE
                 org     uk101reset
 reset           orcc    #%01010000        ; Disable interrupts
                 lds     #ramtop           ; Set up initial stack pointer
- if HD6309 eq 1
-                fcb     $11,$3d,$01       ; ldmd #$01 Into 6309 mode
- endi
+ if HD6309
+                ldmd    #$01              ; Switch into 6309 native mode
+ endif
                 clra
                 clrb
                 tfr     d,x
