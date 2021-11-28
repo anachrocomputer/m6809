@@ -95,6 +95,7 @@ regx            rmb     2
 regy            rmb     2
 regu            rmb     2
 regs            rmb     2
+cksum           rmb     1                 ; Hex load/save checksum
 illvec          rmb     2                 ; 6309 Illegal Instruction trap
 swi3vec         rmb     2
 swi2vec         rmb     2
@@ -182,10 +183,6 @@ ctrlch          cmpa    #nul              ; Ignore NULs
                 bra     vdurtn            ; Back to main VDU routine
 
 ; VDU control character handling routines
-vwrap           bsr     vctrl_m           ; Emulate CR/LF
-                bsr     vctrl_j
-                bra     vdurtn
-                
 vctrltab        fdb     vctrl_g
                 fdb     vctrl_h
                 fdb     vctrl_i
@@ -195,6 +192,10 @@ vctrltab        fdb     vctrl_g
                 fdb     vctrl_m
                 fdb     vctrl_n
 
+vwrap           bsr     vctrl_m           ; Emulate CR/LF
+                bsr     vctrl_j
+                bra     vdurtn
+                
 vctrl_g         bsr     vduflip           ; CTRL_G: bell
                 lda     #20
 flipdly         jsr     dly1ms
@@ -263,12 +264,20 @@ vctrl_k         leax    -vramstride,x     ; CTRL_K: cursor up
                 rts
 
 vctrl_l         pshs    a,y               ; CTRL_L: clear screen
-                ldd     #$2020            ; ASCII space in both A and B
                 ldx     #vram
+ if HD6309
+                pshsw
+                ldy     #aspace           ; Y->an ASCII space
+                ldw     #vramsz
+                tfm     y,x+
+                pulsw
+ else
+                ldd     #$2020            ; ASCII space in both A and B
                 ldy     #vramsz
 vcl             std     ,x++
                 leay    -2,y
                 bne     vcl
+ endif
                 puls    a,y
 vctrl_n         ldx     #vram+lm          ; CTRL_N: home cursor
                 stx     crsrrow
@@ -279,8 +288,8 @@ vctrl_m         clrb                      ; CTRL_M: carriage return
 ; Entry: no parameters
 ; Exit: A, B, Y changed; X, U unchanged
 vduflip         ldy     #vram+lm          ; 4
-                lda     #16               ; 2 vdurows
-flp_r           ldb     #vducols          ; 2 vducols
+                lda     #vdurows          ; 2
+flp_r           ldb     #vducols          ; 2
                 pshs    a
 flp_c           lda     ,y                ;     Load from video RAM
                 eora    #$81              ;     Flip $20 -> $A1
@@ -296,34 +305,64 @@ flp_c           lda     ,y                ;     Load from video RAM
 ; VDUSAVE --- save video display into memory buffer
 ; Entry: buffer address in X
 ; Exit: registers unchanged
-vdusave         pshs    a,b,x,y,u
+ if HD6309
+vdusave         pshs    a,x,y             ; Save registers
+                pshsw
+ else
+vdusave         pshs    a,b,x,y,u         ; Save registers
+ endif
                 ldy     #vram+lm          ; 4
-                lda     #16               ; 2 vdurows
-sav_r           ldb     #24               ; 2 vducols / 2
+                lda     #vdurows          ; 2
+ if HD6309
+sav_r           ldw     #vducols
+                tfm     y+,x+
+ else
+sav_r           ldb     #vducols / 2      ; 2
 sav_c           ldu     ,y++              ; 5+3 Load from video RAM
                 stu     ,x++              ; 5+3 Store into buffer
                 decb                      ; 2
                 bne     sav_c             ; 3  
+ endif
                 leay    16,y              ; 4+1 Skip 16 bytes in VRAM
                 deca                      ; 2
                 bne     sav_r             ; 3   
-                puls    a,b,x,y,u,pc
+ if HD6309
+                pulsw                     ; Restore registers and return
+                puls    a,x,y,pc          
+ else
+                puls    a,b,x,y,u,pc      ; Restore registers and return
+ endif
                 
 ; VDURESTORE --- restore video display from buffer in memory
 ; Entry: buffer address in X
 ; Exit: registers unchanged
-vdurestore      pshs    a,b,x,y,u
+ if HD6309
+vdurestore      pshs    a,x,y             ; Save registers
+                pshsw
+ else
+vdurestore      pshs    a,b,x,y,u         ; Save registers
+ endif
                 ldy     #vram+lm
-                lda     #16               ; vdurows
-rest_r          ldb     #24               ; vducols / 2
+                lda     #vdurows
+ if HD6309
+rest_r          ldw     #vducols
+                tfm     x+,y+
+ else
+rest_r          ldb     #vducols / 2
 rest_c          ldu     ,x++              ; Load from buffer
                 stu     ,y++              ; Store into video RAM
                 decb
                 bne     rest_c
+ endif
                 leay    16,y              ; Skip 16 bytes in VRAM
                 deca
                 bne     rest_r
-                puls    a,b,x,y,u,pc
+ if HD6309
+                pulsw                     ; Restore registers and return
+                puls    a,x,y,pc
+ else
+                puls    a,b,x,y,u,pc      ; Restore registers and return
+ endif
                 
 ; KBHIT --- return with carry set if a key is pressed
 kbhit           pshs    a,b
@@ -479,6 +518,15 @@ t1ou1           lda     acias             ; Read ACIA status
                 sta     aciad             ; Send char
                 rts
                 
+; T1IN
+; Entry:
+; Exit:  A=ASCII char from UART
+t1in            lda     acias             ; Read ACIA status
+                anda    #$01              ; Check RDRF bit
+                beq     t1in
+                lda     aciad             ; Get ASCII byte from RDR
+                rts
+
 ; GETKEY
 ; Read a single keystroke from the keyboard by polling
 getkey          pshs    b,x               ; Save B and X
@@ -712,6 +760,8 @@ kbokmsg         fcb     ctrl_i
 
 monmsg          fcc     "UK109 Machine Code Monitor"
                 fcb     cr,lf,eos
+chkmsg          fcc     " checksum errors"
+                fcb     eos
 
 N               equ     $80                      
 NKY             equ     0
@@ -946,17 +996,95 @@ gcmd            jsr     hex4in            ; Get address
 hcmd            ldx     #monmsg           ; Monitor help command
                 jsr     prtmsg
                 rts
+
+; Load Intel-format checksum hex
+lcmd            jsr     crlf
+                ldu     #0                ; Initialise error count
+l1              ldy     #0                ; Initialise checksum
+                jsr     t1in              ; Read, looking for start of record
+                jsr     vduchar           ; Echo to screen
+                cmpa    #':'              ; Colon for Intel format
+                beq     lintel
+                cmpa    #'S'              ; S for Motorola S-Record
+                beq     lsrec
+                cmpa    #';'              ; Semicolon for MOS Technologies
+                lbeq    lmostech
+                bra     l1                ; Unrecognised record starter
+lintel          jsr     hex2in            ; Read length
+                leay    a,y               ; Add to checksum
+                pshs    a                 ; Save length
+                jsr     hex4in            ; Read start address
+                leay    a,y               ; Add to checksum
+                leay    b,y               ; Add to checksum
+                tfr     d,x               ; Address into X
+                puls    b                 ; Get length back into B
+                jsr     hex2in            ; Read record type
+                bne     li4
+                leay    a,y               ; Add to checksum
+l2              jsr     hex2in            ; Read data byte
+                sta     ,x+               ; Store into memory
+                leay    a,y               ; Add to checksum
+                decb                      ; Decrement loop counter
+                bne     l2                ; Go back for next byte
+                jsr     hex2in            ; Read checksum from input
+                leay    a,y               ; Add to computed checksum
+                tfr     y,d               ; LSB should be 0
+                cmpb    #0                ; B contains LSB
+                beq     l3
+                leau    1,u               ; Increment error counter
+l3              bra     l1                ; Go back for next line
+li4             jsr     hex2in            ; Dummy read checksum
+                bra     ldone
+lsrec           jsr     t1in              ; Read record type
+                jsr     vduchar           ; Echo to screen
+                cmpa    #'1'
+                beq     ls1
+                cmpa    #'9'              ; Check for EOF
+                beq     ls4
+                bra     l1                ; Ignore unknown record types
+ls1             jsr     hex2in            ; Read length
+                leay    a,y               ; Add to checksum
+                suba    #3                ; Allow for 3 byte header
+                pshs    a                 ; Save length
+                jsr     hex4in            ; Read start address
+                leay    a,y               ; Add to checksum
+                leay    b,y               ; Add to checksum
+                tfr     d,x               ; Address into X
+                puls    b                 ; Get length back into B
+ls2             jsr     hex2in            ; Read data byte
+                sta     ,x+               ; Store into memory
+                leay    a,y               ; Add to checksum
+                decb                      ; Decrement loop counter
+                bne     ls2               ; Go back for next byte
+                tfr     y,d               ; LSB into B
+                comb                      ; Form one's complement of LSB
+                stb     cksum             ; Save in memory
+                jsr     hex2in            ; Read checksum from input
+                cmpa    cksum             ; Compare computed and read-in
+                beq     ls3
+                leau    1,u               ; Increment error counter
+ls3             lbra    l1                ; Go back for next line
+ls4             jsr     hex2in            ; Dummy read length
+                jsr     hex4in            ; Dummy read address
+                jsr     hex2in            ; Dummy read checksum
+                bra     ldone
+lmostech        nop
+                bra     ldone
+ldone           tfr     u,d               ; Get error count into D
+                jsr     crlf
+                jsr     hex4ou
+                ldx     #chkmsg
+                jsr     prtmsg
+                rts
+
 icmd
 jcmd
 kcmd
-lcmd
 mcmd
 ncmd
 ocmd
 pcmd
 qcmd
-scmd
-tcmd
 ucmd            rts
 
 ; RCMD --- monitor 'R' command: register dump
@@ -1032,40 +1160,62 @@ regprt4         jsr     vduchar
                 rts
 
 ; SCMD --- monitor 'S' command: save memory in Motorola S-Record format
-;scmd            jsr     hex4in            ; Get starting address
-;                tfr     d,x
-;                lda     #','
-;                jsr     vduchar
-;                jsr     hex4in            ; Get ending address
-;                tfr     d,y
-;                jsr     crlf
-;                ; Send S9 record
-;                rts
+scmd            jsr     hex4in            ; Get starting address
+                tfr     d,x
+                lda     #','
+                jsr     vduchar
+                jsr     hex4in            ; Get ending address
+                tfr     d,y
+                jsr     crlf
+                ldb     #32               ; 32 byte records
+                bsr     sblk              ; Write one S-record
+                bsr     sblk              ; Write one S-record
+                ldx     #s9eof            ; X->EOF record
+                jsr     prtmsg
+                rts
+s9eof           fcc     "S9030000FC"
+                fcb     cr,lf,eos
 
 ; sblk --- write a single block of S-Record data
 ; X: start address, Y: length
-;sblk            lda     #'S'
-;                jsr     vduchar
-;                lda     #'1'
-;                jsr     vduchar
-;                tfr     b,a               ; Get length
-;                adda    #3                ; Add three for address & checksum bytes
-;                jsr     hex2ou            ; Send length
-;                tfr     x,d
-;                jsr     hex4ou            ; Block start address
-;sloop           lda     ,x
-;                jsr     hex2ou            ; Payload bytes
-;                leay    -1,y
-;                bne     sloop
-;                tfr     b,a               ; Get checksum
-;                jsr     hex2ou            ; Checksum
-;                jsr     crlf
-;                rts
-;ucmd            clrb
-;uhang           jsr     dly1ms            ; 8
-;                incb                      ; 2
-;                stb     keymatrix         ; 5
-;                bra     uhang             ; 3 Hang here
+sblk            pshs    b                 ; Save B (length)
+                lda     #'S'
+                jsr     vduchar
+                lda     #'1'
+                jsr     vduchar
+                ldy     #0                ; Initialise checksum
+                tfr     b,a               ; Get length
+                adda    #3                ; Add three for address & checksum bytes
+                jsr     hex2ou            ; Send length
+                leay    a,y               ; Add byte count to checksum
+                pshs    d
+                tfr     x,d
+                jsr     hex4ou            ; Block start address
+                leay    a,y               ; Add MSB of address to checksum
+                tfr     b,a
+                leay    a,y               ; Add LSB of address to checksum
+                puls    d
+sloop           lda     ,x+
+                leay    a,y               ; Add byte to checksum
+                jsr     hex2ou            ; Payload bytes
+                decb                      ; Decrement byte counter
+                bne     sloop
+                tfr     y,d               ; Get checksum
+                tfr     b,a               ; Get LSB
+                coma                      ; Complement checksum
+                jsr     hex2ou            ; Checksum
+                jsr     crlf
+                puls    b                 ; Restore B
+                rts
+
+; TCMD --- monitor 'T' command: test ACIA output
+tcmd            ldx     #monmsg           ; X->monitor sign-on message
+t1              lda     ,x+               ; Get character
+                beq     t2
+                jsr     vduchar
+                jsr     t1ou
+                bra     t1
+t2              rts
 
 ; VCMD --- monitor 'V' command: show VDU character set
 vcmd            ldx     #vdubuf           ; Save VDU RAM
@@ -1239,6 +1389,9 @@ reset           orcc    #%01010000        ; Disable interrupts
  endif
                 clra
                 clrb
+ if HD6309
+                tfr     d,w
+ endif
                 tfr     d,x
                 tfr     d,y
                 tfr     d,u
@@ -1252,17 +1405,23 @@ reset           orcc    #%01010000        ; Disable interrupts
                 stb     acias             ; Store $11: divide-by-16
                 
 ; Clear UK101 screen
-                lda     #sp
                 ldx     #vram
-                ldy     #vramsz
+ if HD6309
+                ldy     #aspace           ; Y->an ASCII space
+                ldw     #vramsz           ; W contains size of video RAM
+                tfm     y,x+
+ else
+                lda     #sp               ; A contains an ASCII space
+                ldy     #vramsz           ; Y contains size of video RAM
 clrscn          sta     ,x+
                 leay    -1,y
                 bne     clrscn
+ endif
                 
 ; Draw box around screen for video setup
                 ldx     #vram+lm          ; X points to top row
                 ldy     #vram+lm          ; Y points to column one
-                ldb     #16
+                ldb     #vdurows
 boxloop         lda     #botch            ; Bottom row
                 sta     15*vramstride,x
                 lda     #topch            ; Top row
