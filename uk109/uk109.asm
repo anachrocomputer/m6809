@@ -896,21 +896,6 @@ atcmd7          cmpa    #'"'              ; "->display as ASCII
 atcmd8          nop                       ; Test for hex here
 atcmdx          rts
                 
-; ACMD --- monitor 'A' command: print $5A as two-digit hex
-acmd            lda     #$5A
-                jsr     hex2ou
-                rts
-
-; BCMD --- monitor 'B' command: print $A5 as two-digit hex
-bcmd            lda     #$A5
-                jsr     hex2ou
-                rts
-
-; CCMD --- monitor 'C' command: print $BABE as four-digit hex
-ccmd            ldd     #$BABE
-                jsr     hex4ou
-                rts
-
 ; DCMD --- monitor 'D' command: dump memory in hex (incomplete)
 dcmd            jsr     hex4in
                 tfr     d,x
@@ -926,17 +911,6 @@ dcmd2           jsr     hex1ou
                 jsr     crlf
                 tfr     x,d
                 jsr     hex4ou
-                rts
-
-; ECMD --- monitor 'E' command: print $DEAD as four-digit hex
-ecmd            ldd     #$DEAD
-                jsr     hex4ou
-                rts
-
-; FCMD --- monitor 'F' command: accept two hex digits, print them out again
-fcmd            jsr     hex2in
-                jsr     crlf
-                jsr     hex2ou
                 rts
 
 ; GCMD --- monitor 'G' command: go
@@ -1077,6 +1051,11 @@ ldone           tfr     u,d               ; Get error count into D
                 jsr     prtmsg
                 rts
 
+acmd
+bcmd
+ccmd
+ecmd
+fcmd
 icmd
 jcmd
 kcmd
@@ -1370,9 +1349,9 @@ box3            fcb     blkch,chqch,lftch,chqch,$E9,  $08,  blch, $B0
 box4            fcb     $94,  $94,  $95,  $95,  $E8,  $E8,  $E8,  $E8
 box5            fcb     $83,  $84,  $8C,  $8B,  $CC,  $CD,  $CB,  $CE
 
-;; PUTLIN_NS
-;; Entry: X->string, U contains return address
-;; Exit:  X modified, other registers unchanged
+; PUTLIN_NS
+; Entry: X->string, U contains return address
+; Exit:  X modified, other registers unchanged
 ;putlin_ns       tfr     d,s               ; Save A and B in stack pointer
 ;putlin_ns2      lda     ,x+               ; Fetch char
 ;                beq     putlin_ns1        ; Test for '\0'
