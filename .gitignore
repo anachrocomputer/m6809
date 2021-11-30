@@ -5,4 +5,6 @@
 asm/as6809
 bas/*.out
 sim/sim6809
+uk109/pbm2fcb
+uk109/splash.asm
 uk109/uk109f.asm

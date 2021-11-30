@@ -8,7 +8,16 @@ AS63FLAGS=--6309
 
 FAS=as6809
 
-all: uk109.hex uk109.srec uk109f.hex
+CC=gcc
+CFLAGS=
+
+all: uk109.hex uk109.srec uk109f.hex pbm2fcb splash.asm
+
+pbm2fcb: pbm2fcb.c
+	$(CC) $(CFLAGS) -o pbm2fcb pbm2fcb.c
+
+splash.asm: splash.pbm
+	./pbm2fcb splash.pbm >splash.asm
 
 # We need to change 'endif' into 'endi' to convert
 # from asm6809 into Frankenstein Assembler. We also need to

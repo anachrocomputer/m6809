@@ -1150,8 +1150,12 @@ scmd            jsr     hex4in            ; Get starting address
                 bsr     sblk              ; Write one S-record
                 bsr     sblk              ; Write one S-record
                 ldx     #s9eof            ; X->EOF record
-                jsr     prtmsg
-                rts
+s1              lda     ,x+
+                beq     sdone
+                jsr     vduchar
+                jsr     t1ou
+                bra     s1
+sdone           rts
 s9eof           fcc     "S9030000FC"
                 fcb     cr,lf,eos
 
@@ -1160,33 +1164,69 @@ s9eof           fcc     "S9030000FC"
 sblk            pshs    b                 ; Save B (length)
                 lda     #'S'
                 jsr     vduchar
+                jsr     t1ou
                 lda     #'1'
                 jsr     vduchar
+                jsr     t1ou
                 ldy     #0                ; Initialise checksum
                 tfr     b,a               ; Get length
                 adda    #3                ; Add three for address & checksum bytes
                 jsr     hex2ou            ; Send length
+                bsr     hex2ou_ac         ; Send length to ACIA
                 leay    a,y               ; Add byte count to checksum
                 pshs    d
                 tfr     x,d
                 jsr     hex4ou            ; Block start address
+                bsr     hex2ou_ac         ; Block start address HI to ACIA
                 leay    a,y               ; Add MSB of address to checksum
                 tfr     b,a
+                bsr     hex2ou_ac         ; Block start address LO to ACIA
                 leay    a,y               ; Add LSB of address to checksum
                 puls    d
 sloop           lda     ,x+
                 leay    a,y               ; Add byte to checksum
                 jsr     hex2ou            ; Payload bytes
+                bsr     hex2ou_ac         ; Payload bytes to ACIA
                 decb                      ; Decrement byte counter
                 bne     sloop
                 tfr     y,d               ; Get checksum
                 tfr     b,a               ; Get LSB
                 coma                      ; Complement checksum
                 jsr     hex2ou            ; Checksum
+                bsr     hex2ou_ac         ; Checksum to ACIA
                 jsr     crlf
+                lda     #cr
+                jsr     t1ou
+                lda     #lf
+                jsr     t1ou
                 puls    b                 ; Restore B
                 rts
 
+; HEX1OU_AC --- print a single hex digit to the ACIA
+; Entry: 4 bit value in A
+; Exit:  registers unchanged
+hex1ou_ac       pshs    a
+                anda    #$0f
+                ora     #$30              ; 0..9 OK
+                cmpa    #$39              ; ASCII 9
+                bls     h1ac
+                adda    #7                ; A..F
+h1ac            jsr     t1ou
+                puls    a,pc
+
+; HEX2OU_AC
+; Entry: 8 bit value in A
+; Exit:  registers unchanged
+hex2ou_ac       pshs    a
+                asra
+                asra
+                asra
+                asra
+                bsr     hex1ou_ac         ; Print high nybble...
+                puls    a
+                bsr     hex1ou_ac         ; then low nybble
+                rts
+                
 ; TCMD --- monitor 'T' command: test ACIA output
 tcmd            ldx     #monmsg           ; X->monitor sign-on message
 t1              lda     ,x+               ; Get character
@@ -1348,6 +1388,9 @@ box2            fcb     blkch,blkch,blkch,blkch,blkch,blkch,blkch,blkch
 box3            fcb     blkch,chqch,lftch,chqch,$E9,  $08,  blch, $B0
 box4            fcb     $94,  $94,  $95,  $95,  $E8,  $E8,  $E8,  $E8
 box5            fcb     $83,  $84,  $8C,  $8B,  $CC,  $CD,  $CB,  $CE
+
+; Data for 48x32 pixel bitmap
+                include "splash.asm"
 
 ; PUTLIN_NS
 ; Entry: X->string, U contains return address
