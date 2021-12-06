@@ -473,7 +473,7 @@ hexerr          lda     #'?'
                 clra
                 bra     hexdone
                 
-; HEX2IN --- read a two hex digits from the keyboard
+; HEX2IN --- read two hex digits from the keyboard
 ; Entry: no parameters
 ; Exit:  8-bit value in A
 hex2in          bsr     hex1in
@@ -486,7 +486,7 @@ hex2in          bsr     hex1in
                 ora     ,s+
                 rts
 
-; HEX4IN --- read a two hex digits from the keyboard
+; HEX4IN --- read four hex digits from the keyboard
 ; Entry: no parameters
 ; Exit:  16-bit value in D
 hex4in          bsr     hex2in
@@ -984,30 +984,30 @@ l1              ldy     #0                ; Initialise checksum
                 cmpa    #';'              ; Semicolon for MOS Technologies
                 lbeq    lmostech
                 bra     l1                ; Unrecognised record starter
-lintel          jsr     hex2in            ; Read length
+lintel          jsr     hex2in_ac         ; Read length
                 leay    a,y               ; Add to checksum
                 pshs    a                 ; Save length
-                jsr     hex4in            ; Read start address
+                jsr     hex4in_ac         ; Read start address
                 leay    a,y               ; Add to checksum
                 leay    b,y               ; Add to checksum
                 tfr     d,x               ; Address into X
                 puls    b                 ; Get length back into B
-                jsr     hex2in            ; Read record type
+                bsr     hex2in_ac         ; Read record type
                 bne     li4
                 leay    a,y               ; Add to checksum
-l2              jsr     hex2in            ; Read data byte
+l2              bsr     hex2in_ac         ; Read data byte
                 sta     ,x+               ; Store into memory
                 leay    a,y               ; Add to checksum
                 decb                      ; Decrement loop counter
                 bne     l2                ; Go back for next byte
-                jsr     hex2in            ; Read checksum from input
+                bsr     hex2in_ac         ; Read checksum from input
                 leay    a,y               ; Add to computed checksum
                 tfr     y,d               ; LSB should be 0
                 cmpb    #0                ; B contains LSB
                 beq     l3
                 leau    1,u               ; Increment error counter
 l3              bra     l1                ; Go back for next line
-li4             jsr     hex2in            ; Dummy read checksum
+li4             bsr     hex2in_ac         ; Dummy read checksum
                 bra     ldone
 lsrec           jsr     t1in              ; Read record type
                 jsr     vduchar           ; Echo to screen
@@ -1016,16 +1016,16 @@ lsrec           jsr     t1in              ; Read record type
                 cmpa    #'9'              ; Check for EOF
                 beq     ls4
                 bra     l1                ; Ignore unknown record types
-ls1             jsr     hex2in            ; Read length
+ls1             bsr     hex2in_ac         ; Read length
                 leay    a,y               ; Add to checksum
                 suba    #3                ; Allow for 3 byte header
                 pshs    a                 ; Save length
-                jsr     hex4in            ; Read start address
+                bsr     hex4in_ac         ; Read start address
                 leay    a,y               ; Add to checksum
                 leay    b,y               ; Add to checksum
                 tfr     d,x               ; Address into X
                 puls    b                 ; Get length back into B
-ls2             jsr     hex2in            ; Read data byte
+ls2             bsr     hex2in_ac         ; Read data byte
                 sta     ,x+               ; Store into memory
                 leay    a,y               ; Add to checksum
                 decb                      ; Decrement loop counter
@@ -1033,14 +1033,14 @@ ls2             jsr     hex2in            ; Read data byte
                 tfr     y,d               ; LSB into B
                 comb                      ; Form one's complement of LSB
                 stb     cksum             ; Save in memory
-                jsr     hex2in            ; Read checksum from input
+                bsr     hex2in_ac         ; Read checksum from input
                 cmpa    cksum             ; Compare computed and read-in
                 beq     ls3
                 leau    1,u               ; Increment error counter
 ls3             lbra    l1                ; Go back for next line
-ls4             jsr     hex2in            ; Dummy read length
-                jsr     hex4in            ; Dummy read address
-                jsr     hex2in            ; Dummy read checksum
+ls4             bsr     hex2in_ac         ; Dummy read length
+                bsr     hex4in_ac         ; Dummy read address
+                bsr     hex2in_ac         ; Dummy read checksum
                 bra     ldone
 lmostech        nop
                 bra     ldone
@@ -1051,6 +1051,51 @@ ldone           tfr     u,d               ; Get error count into D
                 jsr     prtmsg
                 rts
 
+; HEX2IN_AC --- read two hex digits from the ACIA
+; Entry: no parameters
+; Exit:  8-bit value in A
+hex2in_ac       bsr     hex1in_ac
+                asla
+                asla
+                asla
+                asla
+                pshs    a
+                bsr     hex1in_ac
+                ora     ,s+
+                rts
+
+; HEX4IN_AC --- read four hex digits from the ACIA
+; Entry: no parameters
+; Exit:  16-bit value in D
+hex4in_ac       bsr     hex2in_ac
+                tfr     a,b
+                bsr     hex2in_ac
+                exg     a,b
+                rts
+               
+; HEX1IN_AC --- read a single hex digit from the ACIA
+; Entry: no parameters
+; Exit:  4-bit value in A
+hex1in_ac       jsr     t1in              ; Read one ASCII character
+                jsr     vduchar           ; Echo it
+                jsr     toupper
+                cmpa    #'0'
+                blo     hexerr_ac
+                cmpa    #'9'
+                bhi     hexalph_ac
+                suba    #'0'
+                bra     hexdone_ac
+hexalph_ac      cmpa    #'A'
+                blo     hexerr_ac
+                cmpa    #'F'
+                bhi     hexerr_ac
+                suba    #'A'-10
+hexdone_ac      rts
+hexerr_ac       lda     #'?'
+                jsr     vduchar
+                clra
+                bra     hexdone_ac
+                
 acmd
 bcmd
 ccmd
