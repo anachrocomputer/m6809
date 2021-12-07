@@ -26,13 +26,13 @@ uk109f.asm: uk109.asm
 	sed -e s/endif/endi/ <uk109.asm | sed -e '/HD6309 *equ *1/s/1/0/' | sed -e '/setdp/s/ /;/' >uk109f.asm
 
 # Assemble M6809 version
-uk109f.hex: uk109f.asm
+uk109f.hex: uk109f.asm uk101.asm
 	$(FAS) -o uk109f.hex -l uk109f.lst uk109f.asm
 
 # Generate Intel Hex file
-uk109.hex: uk109.asm
+uk109.hex: uk109.asm uk101.asm
 	$(AS63) $(AS63FLAGS) -H -o uk109.hex -l uk109.lst uk109.asm
 
 # Generate Motorola S-record file
-uk109.srec: uk109.asm
+uk109.srec: uk109.asm uk101.asm
 	$(AS63) $(AS63FLAGS) -S -o uk109.srec -l uk109.lst uk109.asm
