@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+BAUD=300
+PORT=/dev/ttyUSB1
+#
+stty -F $PORT $BAUD clocal -crtscts
+cat $1.srec >$PORT
