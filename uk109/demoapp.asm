@@ -23,9 +23,62 @@ rnd16           equ     $a277             ; Generate 16-bit random number
                 org     $0400
 main            ldx     #hellostr         ; X->string in RAM
                 jsr     prtmsg
+                jsr     getkey            ; Wait for a key-press
+                lda     #31               ; Init loop counter
+l1              tfr     a,b               ; Copy X co-ord to B reg
+                jsr     setpixel          ; Set one pixel
+                deca                      ; Decrement loop counter
+                bpl     l1                ; Loop back for next pixel
+                jsr     getkey            ; Wait for a key-press
                 rts
                 
 hellostr        fcc     "Hello, world"
                 fcb     cr,lf,eos
+                
+; SETPIXEL --- set a single pixel at X,Y
+; Entry: A=X, B=Y
+; Exit:  Registers unchanged
+setpixel        pshs    a,b,x             ; Save registers
+                bsr     pixeladdr         ; Get address of pixel into X
+                lda     ,x                ; Get character at pixel location
+                cmpa    #161              ; Are both pixels already set?
+                beq     spdone            ; If so, we're done
+                andb    #$01              ; Odd or even Y co-ord?
+                beq     speven
+                cmpa    #158              ; Is pixel already set?
+                beq     spdone            ; If so, we're done
+                cmpa    #162              ; Is the other pixel already set?
+                bne     sp1
+                lda     #161              ; Set both pixels
+                bra     spstore
+sp1             lda     #158              ; Load pixel to be set
+                bra     spstore
+speven          cmpa    #162              ; Is pixel already set?
+                beq     spdone            ; If so, we're done
+                cmpa    #158              ; Is the other pixel already set?
+                bne     sp2
+                lda     #161              ; Set both pixels
+                bra     spstore
+sp2             lda     #162              ; Load pixel to be set
+spstore         sta     ,x                ; Store in VDU RAM
+spdone          puls    a,b,x,pc          ; Restore registers and return
+
+; PIXELADDR --- work out address of character in VDU RAM from X,Y
+; Entry: A=X, B=Y
+; Exit:  X=address in VDU RAM
+pixeladdr       pshs    a                 ; Save registers
+                ldx     #vram+lm          ; X->VDU RAM
+                leax    a,x               ; Add X co-ord
+                tfr     b,a               ; Y co-ord into A
+                lsra                      ; Divide by two
+                lsla                      ; Multiply by two 
+                lsla                      ; Multiply by two 
+                lsla                      ; Multiply by two 
+                lsla                      ; Multiply by two
+                leax    a,x               ; Add once...
+                leax    a,x               ; Add twice...
+                leax    a,x               ; Add three times...
+                leax    a,x               ; Add four times
+                puls    a,pc              ; Restore registers and return
 
                 end     main
