@@ -45,21 +45,21 @@ setpixel        pshs    a,b,x             ; Save registers
                 beq     spdone            ; If so, we're done
                 andb    #$01              ; Odd or even Y co-ord?
                 beq     speven
-                cmpa    #158              ; Is pixel already set?
+                cmpa    #154              ; Is pixel already set?
                 beq     spdone            ; If so, we're done
-                cmpa    #162              ; Is the other pixel already set?
+                cmpa    #155              ; Is the other pixel already set?
                 bne     sp1
                 lda     #161              ; Set both pixels
                 bra     spstore
-sp1             lda     #158              ; Load pixel to be set
+sp1             lda     #154              ; Load pixel to be set
                 bra     spstore
-speven          cmpa    #162              ; Is pixel already set?
+speven          cmpa    #155              ; Is pixel already set?
                 beq     spdone            ; If so, we're done
-                cmpa    #158              ; Is the other pixel already set?
+                cmpa    #154              ; Is the other pixel already set?
                 bne     sp2
                 lda     #161              ; Set both pixels
                 bra     spstore
-sp2             lda     #162              ; Load pixel to be set
+sp2             lda     #155              ; Load pixel to be set
 spstore         sta     ,x                ; Store in VDU RAM
 spdone          puls    a,b,x,pc          ; Restore registers and return
 
@@ -74,11 +74,14 @@ pixeladdr       pshs    a                 ; Save registers
                 lsla                      ; Multiply by two 
                 lsla                      ; Multiply by two 
                 lsla                      ; Multiply by two 
-                lsla                      ; Multiply by two
                 leax    a,x               ; Add once...
                 leax    a,x               ; Add twice...
                 leax    a,x               ; Add three times...
-                leax    a,x               ; Add four times
+                leax    a,x               ; Add four times...
+                leax    a,x               ; Add five times...
+                leax    a,x               ; Add six times...
+                leax    a,x               ; Add seven times...
+                leax    a,x               ; Add eight times
                 puls    a,pc              ; Restore registers and return
 
                 end     main
