@@ -24,15 +24,47 @@ rnd16           equ     $a277             ; Generate 16-bit random number
 main            ldx     #hellostr         ; X->string in RAM
                 jsr     prtmsg
                 jsr     getkey            ; Wait for a key-press
+
+; Draw diagonal from 31,31 to 0,0
                 lda     #31               ; Init loop counter
 l1              tfr     a,b               ; Copy X co-ord to B reg
                 jsr     setpixel          ; Set one pixel
                 deca                      ; Decrement loop counter
                 bpl     l1                ; Loop back for next pixel
                 jsr     getkey            ; Wait for a key-press
+
+; Draw diagonal from 31,0 to 0,31
+                lda     #31               ; Init X=31
+                ldb     #0                ; Init Y=0
+l2              jsr     setpixel          ; Set one pixel
+                incb                      ; Increment Y
+                deca                      ; Decrement X
+                bpl     l2                ; Loop back for next pixel
+                jsr     getkey            ; Wait for a key-press
+
+; Fill 32x32 pixel square
+                ldb     #31               ; Init loop counters
+l4              lda     #31
+l5              jsr     setpixel          ; Set one pixel
+                deca                      ; Decrement X
+                bpl     l5
+                decb                      ; Decrement Y
+                bpl     l4
+                jsr     getkey            ; Wait for a key-press
                 rts
                 
-hellostr        fcc     "Hello, world"
+hellostr        fcb     12                ; CTRL-L: clear screen
+                fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
+                fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
+                fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
+                fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
+                fcc     "UK109 graphics"
+                fcb     cr,lf
+                fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
+                fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
+                fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
+                fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
+                fcc     "  demo 48x32"
                 fcb     cr,lf,eos
                 
 ; SETPIXEL --- set a single pixel at X,Y
