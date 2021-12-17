@@ -18,6 +18,7 @@ vdurestore      equ     $a108             ; Restore VDU from buffer
 getkey          equ     $a1f6             ; Get a char from the keyboard
 getchar         equ     $a252             ; Get char and show cursor
 rnd16           equ     $a277             ; Generate 16-bit random number
+dly1ms          equ     $a26c             ; Delay for one millisecond
 
                 setdp   0
                 org     $0400
@@ -51,20 +52,68 @@ l5              jsr     setpixel          ; Set one pixel
                 decb                      ; Decrement Y
                 bpl     l4
                 jsr     getkey            ; Wait for a key-press
-                rts
+
+                ldx     #hellostr         ; X->string in RAM
+                jsr     prtmsg
+
+; Fill 32x32 pixel square in random sequence
+                ldx     #1023             ; Loop counter for 32x32 pixels
+l6              jsr     rnd10             ; Get 10-bit random number
+                pshs    b                 ; Save LSB
+                lslb                      ; Shift D left 3 times:
+                rola                      ;  16-bit shift
+                lslb
+                rola
+                lslb
+                rola
+                puls    b                 ; Recover LSB
+                andb    #31
+                jsr     setpixel
+                jsr     dly1ms            ; Delay 2ms per pixel
+                jsr     dly1ms
+                leax    -1,x              ; Decrement loop counter
+                bne     l6
+                ldd     #0                ; Set pixel at 0,0
+                jsr     setpixel
                 
+                jsr     getkey            ; Wait for a key-press
+
+                rts                       ; Exit to monitor
+
+; RND10 --- generate a 10-bit random number using maximal-length LFSR
+; Entry: no parameters
+; Exit:  pseudo-random number in D (lowest 10 bits)
+rnd10           lda     rng1              ; Load the MS byte
+                anda    #$02              ; Mask bit 9 of 10-bit word
+                tfr     a,b               ; Put into B
+                lsrb                      ; Move into LSB of B
+                lda     rng2              ; Load the LS byte
+                anda    #$40              ; Mask bit 6 of 10-bit word
+                beq     r1
+                comb                      ; Bit 6 was set, so flip B
+r1              lsrb                      ; Bottom bit of B into carry
+                rol     rng2              ; Now do a 16-bit left shift
+                rol     rng1              ;  taking the carry bit in
+                lda     rng1              ; Load 10 random bits
+                anda    #$03              ; Mask to ensure 10 bit range
+                ldb     rng2
+                rts
+
+rng1            fcb     1                 ; Random number, MSB
+rng2            fcb     234               ; Random number, LSB
+
 hellostr        fcb     12                ; CTRL-L: clear screen
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
-                fcc     "UK109 graphics"
+                fcc     " UK109 graphics"
                 fcb     cr,lf
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
-                fcc     "  demo 48x32"
+                fcc     "   demo 48x32"
                 fcb     cr,lf,eos
                 
 ; SETPIXEL --- set a single pixel at X,Y
