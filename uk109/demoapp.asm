@@ -83,24 +83,24 @@ l6              jsr     rnd10             ; Get 10-bit random number
 ; RND10 --- generate a 10-bit random number using maximal-length LFSR
 ; Entry: no parameters
 ; Exit:  pseudo-random number in D (lowest 10 bits)
-rnd10           lda     rng1              ; Load the MS byte
+rnd10           lda     rngmsb            ; Load the MS byte
                 anda    #$02              ; Mask bit 9 of 10-bit word
                 tfr     a,b               ; Put into B
                 lsrb                      ; Move into LSB of B
-                lda     rng2              ; Load the LS byte
+                lda     rnglsb            ; Load the LS byte
                 anda    #$40              ; Mask bit 6 of 10-bit word
                 beq     r1
                 comb                      ; Bit 6 was set, so flip B
 r1              lsrb                      ; Bottom bit of B into carry
-                rol     rng2              ; Now do a 16-bit left shift
-                rol     rng1              ;  taking the carry bit in
-                lda     rng1              ; Load 10 random bits
+                rol     rnglsb            ; Now do a 16-bit left shift
+                rol     rngmsb            ;  taking the carry bit in
+                lda     rngmsb            ; Load 10 random bits
                 anda    #$03              ; Mask to ensure 10 bit range
-                ldb     rng2
+                ldb     rnglsb
                 rts
 
-rng1            fcb     1                 ; Random number, MSB
-rng2            fcb     234               ; Random number, LSB
+rngmsb          fcb     1                 ; Random number, MSB
+rnglsb          fcb     234               ; Random number, LSB
 
 hellostr        fcb     12                ; CTRL-L: clear screen
                 fcb     9,9,9,9,9,9,9,9   ; 8xCTRL-I: cursor right
