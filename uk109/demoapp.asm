@@ -7,6 +7,12 @@ eos             equ     $00
 cr              equ     $0d
 lf              equ     $0a
 
+; UK101 character-cell graphics used as pixels
+pixnone         equ     32                ; Space: no pixels set
+pixeven         equ     155               ; Pixel set at even Y co-ord
+pixodd          equ     154               ; Pixel set at odd Y co-ord
+pixboth         equ     161               ; Both pixels set
+
 ; Addresses in UK109 $A000 ROM
 crlf            equ     $a000             ; Print CR/LF
 space           equ     $a00c             ; Print a space
@@ -43,22 +49,57 @@ l2              jsr     setpixel          ; Set one pixel
                 bpl     l2                ; Loop back for next pixel
                 jsr     getkey            ; Wait for a key-press
 
-; Fill 32x32 pixel square
+; Fill 32x32 pixel square from bottom
                 ldb     #31               ; Init loop counters
 l4              lda     #31
 l5              jsr     setpixel          ; Set one pixel
                 deca                      ; Decrement X
                 bpl     l5
+                jsr     dly1ms            ; Slow down a little
+                jsr     dly1ms
+                jsr     dly1ms
+                jsr     dly1ms
                 decb                      ; Decrement Y
                 bpl     l4
                 jsr     getkey            ; Wait for a key-press
 
+; Clear diagonal from 31,31 to 0,0
+                lda     #31               ; Init loop counter
+l6              tfr     a,b               ; Copy X co-ord to B reg
+                jsr     clrpixel          ; Clear one pixel
+                deca                      ; Decrement loop counter
+                bpl     l6                ; Loop back for next pixel
+                jsr     getkey            ; Wait for a key-press
+
+; Clear diagonal from 31,0 to 0,31
+                lda     #31               ; Init X=31
+                ldb     #0                ; Init Y=0
+l7              jsr     clrpixel          ; Clear one pixel
+                incb                      ; Increment Y
+                deca                      ; Decrement X
+                bpl     l7                ; Loop back for next pixel
+                jsr     getkey            ; Wait for a key-press
+
+; Clear 32x32 pixel square from bottom
+                ldb     #31               ; Init loop counters
+l8              lda     #31
+l9              jsr     clrpixel          ; Clear one pixel
+                deca                      ; Decrement X
+                bpl     l9
+                jsr     dly1ms            ; Slow down a little
+                jsr     dly1ms
+                jsr     dly1ms
+                jsr     dly1ms
+                decb                      ; Decrement Y
+                bpl     l8
+                jsr     getkey            ; Wait for a key-press
+
+; Fill 32x32 pixel square in random sequence
                 ldx     #hellostr         ; X->string in RAM
                 jsr     prtmsg
 
-; Fill 32x32 pixel square in random sequence
                 ldx     #1023             ; Loop counter for 32x32 pixels
-l6              jsr     rnd10             ; Get 10-bit random number
+l10             jsr     rnd10             ; Get 10-bit random number
                 pshs    b                 ; Save LSB
                 lslb                      ; Shift D left 3 times:
                 rola                      ;  16-bit shift
@@ -72,10 +113,32 @@ l6              jsr     rnd10             ; Get 10-bit random number
                 jsr     dly1ms            ; Delay 2ms per pixel
                 jsr     dly1ms
                 leax    -1,x              ; Decrement loop counter
-                bne     l6
+                bne     l10
                 ldd     #0                ; Set pixel at 0,0
                 jsr     setpixel
                 
+                jsr     getkey            ; Wait for a key-press
+
+; Clear 32x32 pixel square in random sequence
+                ldx     #1023             ; Loop counter for 32x32 pixels
+l11             jsr     rnd10             ; Get 10-bit random number
+                pshs    b                 ; Save LSB
+                lslb                      ; Shift D left 3 times:
+                rola                      ;  16-bit shift
+                lslb
+                rola
+                lslb
+                rola
+                puls    b                 ; Recover LSB
+                andb    #31
+                jsr     clrpixel
+                jsr     dly1ms            ; Delay 2ms per pixel
+                jsr     dly1ms
+                leax    -1,x              ; Decrement loop counter
+                bne     l11
+                ldd     #0                ; Set pixel at 0,0
+                jsr     clrpixel
+
                 jsr     getkey            ; Wait for a key-press
 
                 rts                       ; Exit to monitor
@@ -122,25 +185,25 @@ hellostr        fcb     12                ; CTRL-L: clear screen
 setpixel        pshs    a,b,x             ; Save registers
                 bsr     pixeladdr         ; Get address of pixel into X
                 lda     ,x                ; Get character at pixel location
-                cmpa    #161              ; Are both pixels already set?
+                cmpa    #pixboth          ; Are both pixels already set?
                 beq     spdone            ; If so, we're done
                 andb    #$01              ; Odd or even Y co-ord?
                 beq     speven
-                cmpa    #154              ; Is pixel already set?
+                cmpa    #pixodd           ; Is pixel already set?
                 beq     spdone            ; If so, we're done
-                cmpa    #155              ; Is the other pixel already set?
+                cmpa    #pixeven          ; Is the other pixel already set?
                 bne     sp1
-                lda     #161              ; Set both pixels
+                lda     #pixboth          ; Set both pixels
                 bra     spstore
-sp1             lda     #154              ; Load pixel to be set
+sp1             lda     #pixodd           ; Load pixel to be set
                 bra     spstore
-speven          cmpa    #155              ; Is pixel already set?
+speven          cmpa    #pixeven          ; Is pixel already set?
                 beq     spdone            ; If so, we're done
-                cmpa    #154              ; Is the other pixel already set?
+                cmpa    #pixodd           ; Is the other pixel already set?
                 bne     sp2
-                lda     #161              ; Set both pixels
+                lda     #pixboth          ; Set both pixels
                 bra     spstore
-sp2             lda     #155              ; Load pixel to be set
+sp2             lda     #pixeven          ; Load pixel to be set
 spstore         sta     ,x                ; Store in VDU RAM
 spdone          puls    a,b,x,pc          ; Restore registers and return
 
@@ -164,5 +227,33 @@ pixeladdr       pshs    a                 ; Save registers
                 leax    a,x               ; Add seven times...
                 leax    a,x               ; Add eight times
                 puls    a,pc              ; Restore registers and return
+                
+; CLRPIXEL --- clear a single pixel at X,Y
+; Entry: A=X, B=Y
+; Exit:  Registers unchanged
+clrpixel        pshs    a,b,x             ; Save registers
+                bsr     pixeladdr         ; Get address of pixel into X
+                lda     ,x                ; Get character at pixel location
+                cmpa    #pixnone          ; Are both pixels already clear?
+                beq     cpdone            ; If so, we're done
+                andb    #$01              ; Odd or even Y co-ord?
+                beq     cpeven
+                cmpa    #pixeven          ; Is pixel already clear?
+                beq     cpdone            ; If so, we're done
+                cmpa    #pixboth          ; Is the other pixel already set?
+                beq     cp1
+                lda     #pixnone          ; Clear both pixels
+                bra     cpstore
+cp1             lda     #pixeven          ; Load pixel to be cleared
+                bra     cpstore
+cpeven          cmpa    #pixodd           ; Is pixel already clear?
+                beq     cpdone            ; If so, we're done
+                cmpa    #pixboth          ; Is the other pixel already set?
+                beq     cp2
+                lda     #pixnone          ; Clear both pixels
+                bra     cpstore
+cp2             lda     #pixodd           ; Load pixel to be cleared
+cpstore         sta     ,x                ; Store in VDU RAM
+cpdone          puls    a,b,x,pc          ; Restore registers and return
 
                 end     main
