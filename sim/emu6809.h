@@ -16,15 +16,15 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
 
-tt_u16 rpc, rx, ry, ru, rs;
-tt_u8 ra, rb, rdp;
-int nbcycle;
-int err6809; 
+extern tt_u16 rpc, rx, ry, ru, rs;
+extern tt_u8 ra, rb, rdp;
+extern int nbcycle;
+extern int err6809;
  
 #ifdef PC_HISTORY
-tt_u16 pchist[PC_HISTORY_SIZE];
-int pchistidx;
-int pchistnbr;
+extern tt_u16 pchist[PC_HISTORY_SIZE];
+extern int pchistidx;
+extern int pchistnbr;
 #endif
 
 /* macros */

@@ -15,13 +15,13 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
 
-int ccc, ccv, ccz, ccn, cci, cch, ccf, cce;
+extern int ccc, ccv, ccz, ccn, cci, cch, ccf, cce;
 
 /* help to compute V bit */
 
 #ifdef BIT_V_DELAYED
-tt_u32 ccvx, ccvy, ccvz;
-int ccvr, ccv8;
+extern tt_u32 ccvx, ccvy, ccvz;
+extern int ccvr, ccv8;
 
 #define GET_V if (!ccvr) {ccvr=1; if (ccv8) { GET_V8;} else { GET_V16;}}
 #define PUT_V {ccvr=1;}
@@ -53,10 +53,10 @@ int ccvr, ccv8;
 #define SET_NZVC8(a,b,r)  {SET_NZ8(r);SET_V8(a,b,r);SET_C8(r);}
 #define SET_NZVC16(a,b,r)  {SET_NZ16(r);SET_V16(a,b,r);SET_C16(r);}
 
-int addrmode;
+extern int addrmode;
 
-tt_u16 (*eaddrmodb[])();
-tt_u16 (*eaddrmodw[])();
+extern tt_u16 (*eaddrmodb[])();
+extern tt_u16 (*eaddrmodw[])();
 
 #define GET_EAB (*eaddrmodb[addrmode])()
 #define GET_EAW (*eaddrmodw[addrmode])()

@@ -34,6 +34,11 @@ int addrmode;
 int nbcycle;
 int err6809;
 
+#ifdef BIT_V_DELAYED
+tt_u32 ccvx, ccvy, ccvz;
+int ccvr, ccv8;
+#endif
+
 #ifdef PC_HISTORY
 tt_u16 pchist[PC_HISTORY_SIZE];
 int pchistidx = 0;
