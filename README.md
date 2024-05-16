@@ -6,8 +6,8 @@ recovered from an old Subversion repository in October 2021 for RetroChallenge.
 ## asm ##
 
 The Frankenstein Assembler for the 6809.
-Needs updating for modern Linux systems which no longer have /usr/tmp.
-Probably needs other updating too.
+Quite an old K&R C program, but should still work on modern Linux systems.
+Can only assemble M6809 code (it does not understand the HD6309 extensions).
 
 ## bas ##
 

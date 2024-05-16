@@ -41,7 +41,7 @@ static char interfn[] =
 #ifdef DOSTMP
  "frtXXXXXX";
 #else
- "/usr/tmp/frtXXXXXX";
+ "/tmp/frtXXXXXX";
 #endif
 int errorcnt = 0, warncnt = 0;
 int listflag = FALSE;
@@ -84,6 +84,7 @@ int main(argc, argv)
 	int hexflag = FALSE;
 	char *symbfn;
 	FILE *symbf;
+	int fd;
 	int  symbflag = FALSE;
 
 	grv = cpumatch(argv[0]);
@@ -170,8 +171,8 @@ int main(argc, argv)
 		loutf = stdout;
 	}
 
-	mktemp(interfn);
-	if( (intermedf = fopen(interfn, "w")) == (FILE *) NULL)
+	fd = mkstemp(interfn);
+	if( (fd < 0) || ((intermedf = fdopen(fd, "w+")) == (FILE *) NULL))
 	{
 		fprintf(stderr, "%s: cannot open temp file %s\n",
 			argv[0], interfn);
@@ -216,10 +217,9 @@ int main(argc, argv)
 	}
 
 	
-	fclose(intermedf);
-	if( (intermedf = fopen(interfn, "r")) == (FILE *) NULL)
+	if (fseek(intermedf, 0L, SEEK_SET) != 0)
 	{
-		fprintf(stderr, "%s: cannot open temp file %s\n",
+		fprintf(stderr, "%s: cannot seek temp file %s\n",
 			argv[0], interfn);
 		exit(1);
 	}
@@ -272,7 +272,13 @@ int main(argc, argv)
 	
 	fclose(intermedf);
 	if( ! Debugmode)
-		unlink(interfn);
+	{
+		if(unlink(interfn) < 0)
+		{
+			fprintf(stderr, "%s: cannot delete temp file %s\n",
+				argv[0], interfn);
+		}
+	}
 	else
 		abort();
 	
