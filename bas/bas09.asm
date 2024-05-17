@@ -4,6 +4,8 @@
 ; Will need three "methods" for each keyword:
 ;  Run, List, Tokenise
 
+DEBUG           equ     0
+
 del             equ     127
 sp              equ     32
 cr              equ     13
@@ -181,8 +183,10 @@ cmdloop         lda     #MAXLINE
                 lda     ,x                ; Look for line numbers
                 jsr     isdigit
                 bne     lnumseen
-;               jsr     prtmsg
-;               jsr     crlf
+ if DEBUG
+                jsr     prtmsg
+                jsr     crlf
+ endif
                 clra                      ; Must be immediate command
                 ldb     #(cmdtabend-cmdtab)/2
                 ldu     #kwtab            ; Pointer to keyword table
@@ -196,8 +200,10 @@ kwsrch          ldy     ,u++
                 jsr     prtmsg
                 bra     cmdloop
 kwfound         ;jsr     hex2ou
-;               ldx     #sammsg 
-;               jsr     prtmsg
+ if DEBUG
+                ldx     #sammsg
+                jsr     prtmsg
+ endif
                 asla                      ; Multiply by two for indexing
                 ldy     #cmdtab
                 jsr     [a,y]             ; Dispatch to command-line routines
@@ -215,8 +221,10 @@ insline         jsr     tokenise
                 cmpa    #0                ; Zero length means error
                 beq     cmdloop
                 stx     lintext           ; Remember where the line text begins
-;               jsr     prtdec8           ; DB
-;               jsr     space             ; DB
+ if DEBUG
+                jsr     prtdec8           ; DB
+                jsr     space             ; DB
+ endif
                 jsr     delline           ; New line is OK, so delete old one
                 tfr     a,b
                 clra
@@ -226,24 +234,30 @@ insline         jsr     tokenise
                 stx     progtop           ; Save for later
                 sty     lnum
                 tfr     y,d               ; Get line number into D
-;               ldx     #insmsg           ; DB
-;               jsr     prtmsg            ; DB
-;               jsr     prtdec16          ; DB Echo line number
+ if DEBUG
+                ldx     #insmsg           ; DB
+                jsr     prtmsg            ; DB
+                jsr     prtdec16          ; DB Echo line number
+ endif
                 jsr     findins           ; Find insertion point (in X)
                 stx     ptr1              ; Remember line pointer for later
-;               tfr     x,d               ; DB
-;               jsr     space             ; DB
-;               jsr     hex4ou            ; DB
-;               jsr     crlf              ; DB
-;               jsr     space             ; DB
-;               ldd     tempw             ; DB
-;               jsr     prtdec16          ; DB Print size of gap to open up
-;               jsr     crlf              ; DB
+ if DEBUG
+                tfr     x,d               ; DB
+                jsr     space             ; DB
+                jsr     hex4ou            ; DB
+                jsr     crlf              ; DB
+                jsr     space             ; DB
+                ldd     tempw             ; DB
+                jsr     prtdec16          ; DB Print size of gap to open up
+                jsr     crlf              ; DB
+ endif
 ins1            ldd     ,x                ; Load link to be modified
                 beq     ins2   
                 tfr     d,y               ; Save original link
-;               jsr     hex4ou            ; DB Print link target address
-;               jsr     space             ; DB
+ if DEBUG
+                jsr     hex4ou            ; DB Print link target address
+                jsr     space             ; DB
+ endif
                 addd    tempw             ; Add length of inserted line
                 std     ,x                ; Write it back
                 tfr     y,x               ; Follow old link
@@ -252,8 +266,10 @@ ins2            ldx     progtop           ; Address of sentinel in X
                 tfr     x,d               ; Into D for arithmetic
                 subd    ptr1              ; Subtract address where line will be inserted
                 addd    #2                ; Add length of sentinel
-;               jsr     prtdec16          ; DB
-;               jsr     crlf              ; DB
+ if DEBUG
+                jsr     prtdec16          ; DB
+                jsr     crlf              ; DB
+ endif
                 tfr     d,y               ; Count into Y
                 ldd     tempw             ; Offset into D
                 ldx     progtop           ; Get address of sentinel
@@ -288,10 +304,12 @@ delline         pshs    d,x,y
                 jsr     findtop           ; Address of sentinel in X
                 stx     progtop           ; Save for later
                 tfr     y,d               ; Get line number back
-;               ldx     #delmsg           ; DB
-;               jsr     prtmsg            ; DB
-;               jsr     prtdec16          ; DB Echo line number
-;               jsr     space             ; DB
+ if DEBUG
+                ldx     #delmsg           ; DB
+                jsr     prtmsg            ; DB
+                jsr     prtdec16          ; DB Echo line number
+                jsr     space             ; DB
+ endif
                 jsr     findln            ; Find line in memory
                 cmpx    #0                ; Did we find it?
                 beq     deldone           ; ...no
@@ -304,15 +322,19 @@ delline         pshs    d,x,y
                 ldd     ,x
                 subd    tempw
                 std     tempw             ; Amount to subtract from each pointer
-;               jsr     space             ; DB
-;               jsr     prtdec16          ; DB Print size of gap to close up
-;               jsr     crlf              ; DB
+ if DEBUG
+                jsr     space             ; DB
+                jsr     prtdec16          ; DB Print size of gap to close up
+                jsr     crlf              ; DB
+ endif
                 ldx     ,x                ; Follow link in line to be deleted
 del1            ldd     ,x                ; Load link to be modified
                 beq     del2   
                 tfr     d,y               ; Save original link
-;               jsr     hex4ou            ; DB Print link target address
-;               jsr     space             ; DB
+ if DEBUG
+                jsr     hex4ou            ; DB Print link target address
+                jsr     space             ; DB
+ endif
                 subd    tempw             ; Subract length of deleted line
                 std     ,x                ; Write it back
                 tfr     y,x               ; Follow old link
@@ -322,8 +344,10 @@ del2            ldx     progtop           ; Address of sentinel in X
                 subd    ptr1              ; Subtract address of line to be deleted
                 subd    tempw             ; Subtract length of line
                 addd    #2                ; Add length of sentinel
-;               jsr     prtdec16          ; DB
-;               jsr     crlf       
+ if DEBUG
+                jsr     prtdec16          ; DB
+                jsr     crlf
+ endif
                 tfr     d,y               ; Count into Y
                 ldd     tempw             ; Offset into D
                 ldx     ptr1              ; Get address of line to be deleted
@@ -381,12 +405,16 @@ LGOTO           jsr     lrword
                 jsr     space
                 ldd     ,x++              ; Get line number
                 jsr     prtdec16          ; Print in decimal
+ if DEBUG
                 lda     #'['              ; DB
                 jsr     t1ou              ; DB
+ endif
                 ldd     ,x++              ; Skip line pointer
+ if DEBUG
                 jsr     hex4ou            ; DB
                 lda     #']'              ; DB
                 jsr     t1ou              ; DB
+ endif
                 rts
 LGOSUB          bra     LGOTO
                 rts
@@ -446,6 +474,7 @@ lrw2            puls    a,x,pc
 LIST            ldx     progbase
 listln          ldd     ,x++              ; Read link to next line
                 beq     listdn            ; Reached end-of-program sentinel?
+ if DEBUG
                 pshs    d                 ; DB
                 lda     #'['              ; DB
                 jsr     t1ou              ; DB
@@ -455,6 +484,7 @@ listln          ldd     ,x++              ; Read link to next line
                 lda     #']'              ; DB
                 jsr     t1ou              ; DB
                 puls    d                 ; DB
+ endif
                 tfr     d,u               ; Save pointer to next line
                 ldd     ,x++              ; Get line number
                 jsr     prtdec16          ; Print in decimal
@@ -1218,8 +1248,6 @@ kpoke           fcc     "POKE"
 krem            fcc     "REM"
                 fcb     eos
 
-;sammsg          fcc     " keyword found"
-;                fcb     cr,lf,eos
 difmsg          fcc     "Mistake"
                 fcb     cr,lf,eos
 synmsg          fcc     "Syntax error"
@@ -1232,10 +1260,14 @@ ovfmsg          fcc     "Line number too big"
                 fcb     cr,lf,eos
 contmsg         fcc     "Cant continue"
                 fcb     cr,lf,eos
-;delmsg          fcc     "Delete line: "
-;                fcb     eos
+ if DEBUG
+sammsg          fcc     " keyword found"
+                fcb     cr,lf,eos
+delmsg          fcc     "Delete line: "
+                fcb     eos
 insmsg          fcc     "Insert line: "
                 fcb     eos
+ endif
 playmsg         fcc     "Press play on tape"
                 fcb     cr,lf,eos
 memmsg          fcc     " bytes used"
