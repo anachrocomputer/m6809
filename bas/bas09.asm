@@ -21,6 +21,7 @@ TOPOFRAM        equ     $7fff             ; Top of 32k RAM
 UK101BAS        equ     $a000             ; Compukit UK101 BASIC ROM $A000-$BFFF
 
 SEP             equ     ':'               ; Multi-statement lines use the colon separator
+DQUOTE          equ     '"'               ; ASCII double quote
 PRINTABBR       equ     '?'               ; Abbreviation for PRINT is question-mark
 
 ; Tokens for all the BASIC keywords
@@ -110,12 +111,14 @@ line40          fdb     line50
 line50          fdb     line60
                 fdb     50
                 fcb     TREM
-                fcc     'Subroutines'
+                fcc     "Subroutines"
                 fcb     eol
 line60          fdb     line70
                 fdb     60
                 fcb     TPRINT
-                fcc     '"HELLO"'
+                fcb     DQUOTE
+                fcc     "HELLO"
+                fcb     DQUOTE
                 fcb     SEP
                 fcb     TRETURN
                 fcb     eol
@@ -147,6 +150,7 @@ varX1           fdb     $ffff             ; -1 decimal
                 org     TOPOFRAM
 RAMTOP          rmb     1
                 
+                setdp   0
                 org     UK101BAS          ; Interpreter code at same address as ROM in UK101
                 
 RESET           orcc    #%01010000        ; Disable interrupts
@@ -811,7 +815,7 @@ crlf            pshs    a
                 jsr     t1ou
                 puls    a,pc
                 
-hexdig          fcc     '0123456789ABCDEF'
+hexdig          fcc     "0123456789ABCDEF"
 
 ; Hex input routines
 
@@ -1142,112 +1146,112 @@ rwordtab        fdb     klet
                 fdb     kon
 rwordtabend
 
-klist           fcc     'LIST'
+klist           fcc     "LIST"
                 fcb     eos
-kvlist          fcc     'VLIST'
+kvlist          fcc     "VLIST"
                 fcb     eos
-krun            fcc     'RUN'
+krun            fcc     "RUN"
                 fcb     eos
-knew            fcc     'NEW'
+knew            fcc     "NEW"
                 fcb     eos
-kcont           fcc     'CONT'
+kcont           fcc     "CONT"
                 fcb     eos
-kload           fcc     'LOAD'
+kload           fcc     "LOAD"
                 fcb     eos
-ksave           fcc     'SAVE'
+ksave           fcc     "SAVE"
                 fcb     eos
-ksystem         fcc     'SYSTEM'
+ksystem         fcc     "SYSTEM"
                 fcb     eos
-kpdump          fcc     'PDUMP'
+kpdump          fcc     "PDUMP"
                 fcb     eos
-kvdump          fcc     'VDUMP'
+kvdump          fcc     "VDUMP"
                 fcb     eos
-kmem            fcc     'MEM'
-                fcb     eos
-
-klet            fcc     'LET'
-                fcb     eos
-kconst          fcc     '<const>'
-                fcb     eos
-kvar            fcc     '<var>'
-                fcb     eos
-kprint          fcc     'PRINT'
-                fcb     eos
-kfor            fcc     'FOR'
-                fcb     eos
-kto             fcc     'TO'
-                fcb     eos
-kstep           fcc     'STEP'
-                fcb     eos
-knext           fcc     'NEXT'
-                fcb     eos
-kif             fcc     'IF'
-                fcb     eos
-kthen           fcc     'THEN'
-                fcb     eos
-kgoto           fcc     'GOTO'
-                fcb     eos
-kgosub          fcc     'GOSUB'
-                fcb     eos
-kreturn         fcc     'RETURN'
-                fcb     eos
-kon             fcc     'ON'
-                fcb     eos
-kdata           fcc     'DATA'
-                fcb     eos
-kread           fcc     'READ'
-                fcb     eos
-krestore        fcc     'RESTORE'
-                fcb     eos
-kinput          fcc     'INPUT'
-                fcb     eos
-kstop           fcc     'STOP'
-                fcb     eos
-kend            fcc     'END'
-                fcb     eos
-kdef            fcc     'DEF'
-                fcb     eos
-kdim            fcc     'DIM'
-                fcb     eos
-kpoke           fcc     'POKE'
-                fcb     eos
-krem            fcc     'REM'
+kmem            fcc     "MEM"
                 fcb     eos
 
-;sammsg          fcc     ' keyword found'
+klet            fcc     "LET"
+                fcb     eos
+kconst          fcc     "<const>"
+                fcb     eos
+kvar            fcc     "<var>"
+                fcb     eos
+kprint          fcc     "PRINT"
+                fcb     eos
+kfor            fcc     "FOR"
+                fcb     eos
+kto             fcc     "TO"
+                fcb     eos
+kstep           fcc     "STEP"
+                fcb     eos
+knext           fcc     "NEXT"
+                fcb     eos
+kif             fcc     "IF"
+                fcb     eos
+kthen           fcc     "THEN"
+                fcb     eos
+kgoto           fcc     "GOTO"
+                fcb     eos
+kgosub          fcc     "GOSUB"
+                fcb     eos
+kreturn         fcc     "RETURN"
+                fcb     eos
+kon             fcc     "ON"
+                fcb     eos
+kdata           fcc     "DATA"
+                fcb     eos
+kread           fcc     "READ"
+                fcb     eos
+krestore        fcc     "RESTORE"
+                fcb     eos
+kinput          fcc     "INPUT"
+                fcb     eos
+kstop           fcc     "STOP"
+                fcb     eos
+kend            fcc     "END"
+                fcb     eos
+kdef            fcc     "DEF"
+                fcb     eos
+kdim            fcc     "DIM"
+                fcb     eos
+kpoke           fcc     "POKE"
+                fcb     eos
+krem            fcc     "REM"
+                fcb     eos
+
+;sammsg          fcc     " keyword found"
 ;                fcb     cr,lf,eos
-difmsg          fcc     'Mistake'
+difmsg          fcc     "Mistake"
                 fcb     cr,lf,eos
-synmsg          fcc     'Syntax error'
+synmsg          fcc     "Syntax error"
                 fcb     cr,lf,eos
-lnummsg         fcc     'Line number expected'
+lnummsg         fcc     "Line number expected"
                 fcb     cr,lf,eos
-;unsupmsg        fcc     'That function is not yet supported'
+;unsupmsg        fcc     "That function is not yet supported"
 ;                fcb     cr,lf,eos
-ovfmsg          fcc     'Line number too big'
+ovfmsg          fcc     "Line number too big"
                 fcb     cr,lf,eos
-contmsg         fcc     'Cant continue'
+contmsg         fcc     "Cant continue"
                 fcb     cr,lf,eos
-;delmsg          fcc     'Delete line: '
+;delmsg          fcc     "Delete line: "
 ;                fcb     eos
-insmsg          fcc     'Insert line: '
+insmsg          fcc     "Insert line: "
                 fcb     eos
-playmsg         fcc     'Press play on tape'
+playmsg         fcc     "Press play on tape"
                 fcb     cr,lf,eos
-memmsg          fcc     ' bytes used'
+memmsg          fcc     " bytes used"
                 fcb     cr,lf,eos
-vermsg          fcc     '6809 BASIC version 0.1'
+vermsg          fcc     "6809 BASIC version 0.1"
                 fcb     cr,lf,eos
 
-vd1             fcc     'progbase: '
+vd1             fcc     "progbase: "
                 fcb     eos
-vd2             fcc     'progtop:  '
+vd2             fcc     "progtop:  "
                 fcb     eos
-vd3             fcc     'scalars:  '
+vd3             fcc     "scalars:  "
                 fcb     eos
-vd4             fcc     'nscalar:  '
+vd4             fcc     "nscalar:  "
                 fcb     eos
-vd5             fcc     'tempw:    '
+vd5             fcc     "tempw:    "
                 fcb     eos
 
 vdumptab        fdb     vd1,progbase
@@ -1258,4 +1262,4 @@ vdumptab        fdb     vd1,progbase
                 fdb     0,0
                 
 
-RESET           end
+                end     RESET

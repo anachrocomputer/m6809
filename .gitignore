@@ -5,6 +5,7 @@
 asm/as6809.c
 asm/as6809.h
 asm/as6809
+bas/bas09f.asm
 bas/*.out
 sim/sim6809
 uk109/pbm2fcb
