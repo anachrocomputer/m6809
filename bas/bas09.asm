@@ -66,7 +66,91 @@ lnum            fdb     0                 ; Line number
 lintext         fdb     0                 ; Pointer to text of line
 
                 org     BASICTEXT         ; BASIC text storage
-
+ if 1
+; 10 REM Test GOTO and GOSUB
+; 20 PRINT"LINE 20"
+; 30 GOTO 50
+; 40 PRINT"LINE 40"
+; 50 PRINT"LINE 50"
+; 60 GOSUB 100
+; 70 PRINT"LINE 70"
+; 80 GOSUB 100
+; 90 STOP
+; 100 PRINT"LINE 100"
+; 110 RETURN
+; 120 END
+line10          fdb     line20            ; Link to next line
+                fdb     10                ; Line number
+                fcb     TREM              ; REM
+                fdb     line20            ; Link filled in by pre-run
+                fcc     "Test GOTO and GOSUB"
+                fcb     eol               ; End of line
+line20          fdb     line30            ; Link to next line
+                fdb     20                ; Line number
+                fcb     TPRINT
+                fcb     '"'
+                fcc     "LINE 20"
+                fcb     '"'
+                fcb     eol               ; End of line
+line30          fdb     line40            ; Link to next line
+                fdb     30                ; Line number
+                fcb     TGOTO
+                fdb     50                ; GOTO target line number
+                fdb     line50            ; Link filled in by pre-run
+                fcb     eol               ; End of line
+line40          fdb     line50            ; Link to next line
+                fdb     40                ; Line number
+                fcb     TPRINT
+                fcb     '"'
+                fcc     "LINE 40"
+                fcb     '"'
+                fcb     eol               ; End of line
+line50          fdb     line60            ; Link to next line
+                fdb     50                ; Line number
+                fcb     TPRINT
+                fcb     '"'
+                fcc     "LINE 50"
+                fcb     '"'
+                fcb     eol               ; End of line
+line60          fdb     line70            ; Link to next line
+                fdb     60                ; Line number
+                fcb     TGOSUB
+                fdb     100               ; GOSUB target line number
+                fdb     line100           ; Link filled in by pre-run
+                fcb     eol               ; End of line
+line70          fdb     line80            ; Link to next line
+                fdb     70                ; Line number
+                fcb     TPRINT
+                fcb     '"'
+                fcc     "LINE 70"
+                fcb     '"'
+                fcb     eol               ; End of line
+line80          fdb     line90            ; Link to next line
+                fdb     80                ; Line number
+                fcb     TGOSUB
+                fdb     100               ; GOSUB target line number
+                fdb     line100           ; Link filled in by pre-run
+                fcb     eol               ; End of line
+line90          fdb     line100           ; Link to next line
+                fdb     90                ; Line number
+                fcb     TSTOP
+                fcb     eol               ; End of line
+line100         fdb     line110           ; Link to next line
+                fdb     100               ; Line number
+                fcb     TPRINT
+                fcb     '"'
+                fcc     "LINE 100"
+                fcb     '"'
+                fcb     eol               ; End of line
+line110         fdb     line120           ; Link to next line
+                fdb     110               ; Line number
+                fcb     TRETURN
+                fcb     eol               ; End of line
+line120         fdb     sentinel          ; Link to next line
+                fdb     120               ; Line number
+                fcb     TEND
+                fcb     eol               ; End of line
+ else
 line10          fdb     line20            ; Small dummy BASIC program for development only
                 fdb     10                ; Line number
                 fcb     TLET              ; Token for LET
@@ -130,6 +214,7 @@ line70          fdb     sentinel
                 fdb     10
                 fdb     line10
                 fcb     eol
+ endif
 sentinel        fdb     0                 ; End-of-program sentinel
 fakeprogtop
 
@@ -346,7 +431,7 @@ del2            ldx     progtop           ; Address of sentinel in X
                 addd    #2                ; Add length of sentinel
  if DEBUG
                 jsr     prtdec16          ; DB
-                jsr     crlf
+                jsr     crlf              ; DB
  endif
                 tfr     d,y               ; Count into Y
                 ldd     tempw             ; Offset into D
@@ -420,6 +505,7 @@ LGOSUB          bra     LGOTO
                 rts
 LRETURN         jmp     lrword
 LREM            jsr     lrword
+                leax    2,x               ; Skip link to next line
                 jmp     space
 LPRINT          jsr     lrword
                 jmp     space
@@ -535,23 +621,45 @@ RUN             bra     runfromstart      ; Temporary: until parser works
                 lda     ,x                ; Look for line number
                 beq     runfromstart
                 jsr     isdigit
-                beq     runline
+                beq     runlin
                 ldx     #lnummsg
                 jsr     prtmsg
                 bra     rundn
-runline         jsr     atoi16u           ; Grab line number
+runlin          jsr     atoi16u           ; Grab line number
                 bcs     runlnerr          ; Overflow?
                 tfr     d,y               ; Save in Y for now
                 jsr     skipbl            ; Skip trailing blanks
                 lda     ,x                ; Make sure we have EOL
                 bne     runsynerr         ; Syntax error
                 tfr     y,d               ; Recover saved line number
-                bra     dorun
-runfromstart    ldd     #50
-dorun           jsr     findln
-                tfr     x,d
+                bra     runln
+runfromstart    ldx     progbase          ; X register points to current execution point in RAM
+runln           ldd     ,x++              ; Read link to next line
+                beq     rundn             ; Reached end-of-program sentinel?
+ if DEBUG
+                lda     #'['              ; DB
+                jsr     t1ou              ; DB
+                tfr     x,d               ; Trace execution pointer
+                subd    #2
                 jsr     hex4ou
-                jsr     crlf
+                lda     #']'              ; DB
+                jsr     t1ou              ; DB
+ endif
+                ldd     ,x++              ; Skip line number
+ if DEBUG
+                jsr     prtdec16          ; Trace line number
+                jsr     crlf              ; DB
+ endif
+runstmnt        lda     ,x+               ; Read byte from tokenised program (must be a token for a statement)
+                beq     runln             ; If we read a zero, skip to next line
+;               cmpa    #':'              ; Colon indicates next statement
+                anda    #$7F              ; Clear top bit
+                asla                      ; Double it
+                ldy     #runtab           ; Get address of call table
+                jsr     [a,y]             ; Call routine for this statement
+; Poll for CTRL-C here
+                jmp     runstmnt          ; Run next statement
+                
 rundn           rts
 runlnerr        ldx     #ovfmsg
                 jsr     prtmsg
@@ -560,6 +668,40 @@ runsynerr       ldx     #synmsg
                 jsr     prtmsg
                 bra     rundn
 
+RREM            ldx     ,x                ; Load X from next word, the pointer to the next BASIC line
+                leax    4,x
+                rts
+                
+RPRINT          lda     ,x+               ; Skip opening quote
+printch         lda     ,x+               ; Read char to be printed
+                cmpa    #'"'              ; Check for closing quote
+                beq     printdn
+                jsr     t1ou              ; Print one char
+                jmp     printch
+printdn         jsr crlf
+                rts
+
+RGOTO           ldd     ,x++              ; Target line number, discard
+                ldx     ,x                ; Target line pointer
+                leax    4,x               ; Point to first statement of target line
+                rts
+                
+RGOSUB          ldd     ,x++              ; Target line number, discard
+                ldd     ,x++              ; Target line pointer
+                rts
+                
+RSTOP           puls    d                 ; Pop and discard return address
+                lda     #'S'
+                jsr     t1ou
+                lda     #'T'
+                jsr     t1ou
+                lda     #'O'
+                jsr     t1ou
+                lda     #'P'
+                jsr     t1ou
+                jsr     crlf
+                jmp     rundn
+                
 ; PDUMP --- dump program area in hex for debugging
 PDUMP           jsr     findtop           ; Find the address of the sentinel
                 tfr     x,d
@@ -1147,6 +1289,34 @@ listtab         fdb     LLET
                 fdb     LDEF
                 fdb     LON
 listtabend
+
+; Table of routines for RUN
+; Must be in same order as tokens
+runtab          fdb     LLET
+                fdb     LCONST
+                fdb     LVAR
+                fdb     RGOTO
+                fdb     RGOSUB
+                fdb     LRETURN
+                fdb     RREM
+                fdb     RPRINT
+                fdb     LEND
+                fdb     RSTOP
+                fdb     LIF
+                fdb     LTHEN
+                fdb     LFOR
+                fdb     LTO
+                fdb     LNEXT
+                fdb     LSTEP
+                fdb     LINPUT
+                fdb     LREAD
+                fdb     LDATA
+                fdb     LRESTORE
+                fdb     LPOKE
+                fdb     LDIM
+                fdb     LDEF
+                fdb     LON
+runtabend
 
 ; Table of BASIC reserved words
 ; Must be in same order as tokens
