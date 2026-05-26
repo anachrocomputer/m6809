@@ -64,6 +64,7 @@ tempw           fdb     0                 ; Temporary word location
 ptr1            fdb     0                 ; Temporary pointer
 lnum            fdb     0                 ; Line number
 lintext         fdb     0                 ; Pointer to text of line
+needprerun      fcb     1                 ; Do we need to execute the pre-run module?
 
                 org     BASICTEXT         ; BASIC text storage
  if 1
@@ -262,6 +263,9 @@ RESET           orcc    #%01010000        ; Disable interrupts
                 tfr     d,u
                 tfr     a,dp              ; Set up Direct Page register
                 
+                lda     #1                ; Initialise pre-run flag
+                sta     needprerun
+                
                 ldx     #BASICTEXT        ; Initialise program base pointer
                 stx     progbase
                 ldx     #fakeprogtop      ; Initial BASIC program is non-empty
@@ -386,6 +390,8 @@ ins3            lda     ,x
 ins4            lda     ,y+
                 sta     ,x+
                 bne     ins4              ; Copy terminating zero byte
+                lda     #1                ; Set pre-run flag
+                sta     needprerun
                 jmp     cmdloop
 
 lnumovf         ldx     #ovfmsg           ; Line number too big
@@ -452,6 +458,8 @@ del3            lda     b,x
                 leay    -1,y
                 cmpy    #0
                 bne     del3
+                lda     #1                ; Set pre-run flag
+                sta     needprerun
 deldone         puls    d,x,y,pc
                 
 ; TOKENISE
@@ -626,8 +634,18 @@ vl2             jsr     t1ou              ; Print second char or space
                 bra     vl1
 vlistdn         rts
                 
+; PRERUN --- after program modification but before running, check all GOTOs and GOSUBs are valid
+PRERUN          ldx     #premsg
+                jsr     prtmsg
+                rts
+                
 ; RUN --- execute program, from start or from given line
-RUN             bra     runfromstart      ; Temporary: until parser works
+RUN             lda     needprerun        ; Do we need to execute the pre-run module?
+                beq     noprerun
+                jsr     PRERUN
+                lda     #0                ; Clear pre-run flag
+                sta     needprerun
+noprerun        bra     runfromstart      ; Temporary: until parser works
                 jsr     skipbl            ; Skip blanks
                 lda     ,x                ; Look for line number
                 beq     runfromstart
@@ -818,11 +836,15 @@ NEW             ldx     #BASICTEXT
                 std     progtop
                 std     scalars
                 std     nscalar
+                lda     #1                ; Set pre-run flag
+                sta     needprerun
                 rts
                 
 ; LOAD --- load program from storage
 LOAD            ldx     #playmsg
                 jsr     prtmsg
+                lda     #1                ; Set pre-run flag
+                sta     needprerun
                 rts
                 
 ; SAVE --- save program to storage
@@ -1475,6 +1497,8 @@ delmsg          fcc     "Delete line: "
 insmsg          fcc     "Insert line: "
                 fcb     eos
  endif
+premsg          fcc     "Executing PRE-RUN"
+                fcb     cr,lf,eos
 playmsg         fcc     "Press play on tape"
                 fcb     cr,lf,eos
 memmsg          fcc     " bytes used"
