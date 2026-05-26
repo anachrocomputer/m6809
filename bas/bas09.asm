@@ -69,9 +69,9 @@ lintext         fdb     0                 ; Pointer to text of line
  if 1
 ; 10 REM Test GOTO and GOSUB
 ; 20 PRINT"LINE 20"
-; 30 GOTO 50
+; 30 GOTO 50:PRINT"LINE 30"
 ; 40 PRINT"LINE 40"
-; 50 PRINT"LINE 50"
+; 50 PRINT"LINE ";:PRINT"50"
 ; 60 GOSUB 100
 ; 70 PRINT"LINE 70"
 ; 80 GOSUB 100
@@ -88,29 +88,40 @@ line10          fdb     line20            ; Link to next line
 line20          fdb     line30            ; Link to next line
                 fdb     20                ; Line number
                 fcb     TPRINT
-                fcb     '"'
+                fcb     DQUOTE
                 fcc     "LINE 20"
-                fcb     '"'
+                fcb     DQUOTE
                 fcb     eol               ; End of line
 line30          fdb     line40            ; Link to next line
                 fdb     30                ; Line number
                 fcb     TGOTO
                 fdb     50                ; GOTO target line number
                 fdb     line50            ; Link filled in by pre-run
+                fcb     SEP               ; Another statement on this line, but unreachable
+                fcb     TPRINT
+                fcb     DQUOTE
+                fcc     "LINE 30"
+                fcb     DQUOTE
                 fcb     eol               ; End of line
 line40          fdb     line50            ; Link to next line
                 fdb     40                ; Line number
                 fcb     TPRINT
-                fcb     '"'
+                fcb     DQUOTE
                 fcc     "LINE 40"
-                fcb     '"'
+                fcb     DQUOTE
                 fcb     eol               ; End of line
 line50          fdb     line60            ; Link to next line
                 fdb     50                ; Line number
                 fcb     TPRINT
-                fcb     '"'
-                fcc     "LINE 50"
-                fcb     '"'
+                fcb     DQUOTE
+                fcc     "LINE "
+                fcb     DQUOTE
+                fcb     ';'
+                fcb     SEP               ; Another statement on this line
+                fcb     TPRINT
+                fcb     DQUOTE
+                fcc     "50"
+                fcb     DQUOTE
                 fcb     eol               ; End of line
 line60          fdb     line70            ; Link to next line
                 fdb     60                ; Line number
@@ -121,9 +132,9 @@ line60          fdb     line70            ; Link to next line
 line70          fdb     line80            ; Link to next line
                 fdb     70                ; Line number
                 fcb     TPRINT
-                fcb     '"'
+                fcb     DQUOTE
                 fcc     "LINE 70"
-                fcb     '"'
+                fcb     DQUOTE
                 fcb     eol               ; End of line
 line80          fdb     line90            ; Link to next line
                 fdb     80                ; Line number
@@ -138,9 +149,9 @@ line90          fdb     line100           ; Link to next line
 line100         fdb     line110           ; Link to next line
                 fdb     100               ; Line number
                 fcb     TPRINT
-                fcb     '"'
+                fcb     DQUOTE
                 fcc     "LINE 100"
-                fcb     '"'
+                fcb     DQUOTE
                 fcb     eol               ; End of line
 line110         fdb     line120           ; Link to next line
                 fdb     110               ; Line number
@@ -652,7 +663,8 @@ runln           ldd     ,x++              ; Read link to next line
  endif
 runstmnt        lda     ,x+               ; Read byte from tokenised program (must be a token for a statement)
                 beq     runln             ; If we read a zero, skip to next line
-;               cmpa    #':'              ; Colon indicates next statement
+                cmpa    #SEP              ; Colon indicates next statement
+                beq     runstmnt          ; Simply get the next byte
                 anda    #$7F              ; Clear top bit
                 asla                      ; Double it
                 ldy     #runtab           ; Get address of call table
@@ -672,13 +684,24 @@ RREM            ldx     ,x                ; Load X from next word, the pointer t
                 leax    4,x
                 rts
                 
-RPRINT          lda     ,x+               ; Skip opening quote
+RPRINT          lda     ,x                ; Check byte after PRINT token
+                beq     printeol          ; Just PRINT, print a newline
+                cmpa    #SEP
+                beq     printeol
+                cmpa    #DQUOTE
+                bne     printnoeol        ; Exit PRINT for now
+                leax    1,x               ; Skip opening quote
 printch         lda     ,x+               ; Read char to be printed
-                cmpa    #'"'              ; Check for closing quote
+                cmpa    #DQUOTE           ; Check for closing quote
                 beq     printdn
                 jsr     t1ou              ; Print one char
                 jmp     printch
-printdn         jsr crlf
+printdn         lda     ,x
+                cmpa    #';'              ; Check for semicolon
+                beq     printnoeol
+printeol        jsr crlf
+                rts
+printnoeol      leax    1,x               ; Skip over semicolon if found
                 rts
 
 RGOTO           ldd     ,x++              ; Target line number, discard
@@ -688,6 +711,10 @@ RGOTO           ldd     ,x++              ; Target line number, discard
                 
 RGOSUB          ldd     ,x++              ; Target line number, discard
                 ldd     ,x++              ; Target line pointer
+                nop                       ; TODO: push return address onto stack
+                rts
+                
+RRETURN         nop                       ; TODO: pop return address off stack
                 rts
                 
 RSTOP           puls    d                 ; Pop and discard return address
@@ -698,6 +725,16 @@ RSTOP           puls    d                 ; Pop and discard return address
                 lda     #'O'
                 jsr     t1ou
                 lda     #'P'
+                jsr     t1ou
+                jsr     crlf
+                jmp     rundn
+
+REND            puls    d                 ; Pop and discard return address
+                lda     #'E'
+                jsr     t1ou
+                lda     #'N'
+                jsr     t1ou
+                lda     #'D'
                 jsr     t1ou
                 jsr     crlf
                 jmp     rundn
@@ -1297,10 +1334,10 @@ runtab          fdb     LLET
                 fdb     LVAR
                 fdb     RGOTO
                 fdb     RGOSUB
-                fdb     LRETURN
+                fdb     RRETURN
                 fdb     RREM
                 fdb     RPRINT
-                fdb     LEND
+                fdb     REND
                 fdb     RSTOP
                 fdb     LIF
                 fdb     LTHEN
