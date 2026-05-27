@@ -65,6 +65,8 @@ ptr1            fdb     0                 ; Temporary pointer
 lnum            fdb     0                 ; Line number
 lintext         fdb     0                 ; Pointer to text of line
 needprerun      fcb     1                 ; Do we need to execute the pre-run module?
+curln           fdb     0                 ; Line number of current line
+preerr          fdb     0                 ; Pre-run error counter
 
                 org     BASICTEXT         ; BASIC text storage
  if 1
@@ -209,6 +211,7 @@ line40          fdb     line50
 line50          fdb     line60
                 fdb     50
                 fcb     TREM
+                fdb     line60            ; Link filled in by pre-run
                 fcc     "Subroutines"
                 fcb     eol
 line60          fdb     line70
@@ -637,12 +640,96 @@ vlistdn         rts
 ; PRERUN --- after program modification but before running, check all GOTOs and GOSUBs are valid
 PRERUN          ldx     #premsg
                 jsr     prtmsg
+                ldd     #0                ; Zero the pre-run error counter
+                std     preerr
+                ldx     progbase          ; X register starts at beginning of tokenised program in RAM
+preln           ldd     ,x++              ; Load link to next line
+                beq     predn             ; Reached end-of-program sentinel?
+                ldd     ,x++              ; Load line number
+                std     curln             ; Save in case we need it for the error message
+prestmnt        lda     ,x+               ; Read byte from tokenised program (must be a token for a statement)
+                beq     preln             ; If we read a zero, skip to next line
+                cmpa    #SEP              ; Colon indicates next statement
+                beq     prestmnt          ; Simply get the next byte
+                anda    #$7F              ; Clear top bit
+                asla                      ; Double it
+                ldy     #pretab           ; Get address of call table
+                jsr     [a,y]             ; Call routine for this statement
+; Poll for CTRL-C here
+                jmp     prestmnt          ; Run next statement
+predn           ldd     preerr            ; Did we find any errors?
+                beq     preok
+                jsr     prtdec16          ; Print error counter
+                ldx     #nerrsmsg
+                jsr     prtmsg
+preok           ldd     preerr            ; Return number of errors found
+                rts
+                
+PREM            ldx     ,x                ; Load X from next word, the pointer to the next BASIC line
+                leax    4,x
+                rts
+                
+PPRINT          lda     ,x                ; Check byte after PRINT token
+                beq     pprinteol         ; Just PRINT, print a newline
+                cmpa    #SEP
+                beq     pprinteol
+                cmpa    #DQUOTE
+                bne     pprintnoeol       ; Exit PRINT for now
+                leax    1,x               ; Skip opening quote
+pprintch        lda     ,x+               ; Read char to be printed
+                cmpa    #DQUOTE           ; Check for closing quote
+                beq     pprintdn
+                nop                       ; Print one char
+                jmp     pprintch
+pprintdn        lda     ,x
+                cmpa    #';'              ; Check for semicolon
+                beq     pprintnoeol
+pprinteol       nop
+                rts
+pprintnoeol     leax    1,x               ; Skip over semicolon if found
+                rts
+
+PGOTOGOSUB      ldd     ,x++              ; Target line number into D
+                tfr     x,y               ; Save X register
+                jsr     findln            ; Search for target line
+                cmpx    #0
+                beq     pgotonf           ; Target line not found
+                stx     ,y++              ; Target line pointer
+                tfr     y,x               ; Restore X register
+                rts
+pgotonf         tfr     y,x               ; Restore X register
+                leax    2,x               ; Skip ahead two bytes
+                pshs    d                 ; Save D
+                ldd     curln             ; Get current line number
+                jsr     prtdec16
+                lda     #':'
+                jsr     t1ou
+                puls    d
+                jsr     space
+                jsr     prtdec16
+                pshs    x
+                ldx     #notfoundmsg
+                jsr     prtmsg
+                puls    x
+                ldy     preerr            ; Count one error found
+                leay    1,y
+                sty     preerr
+                rts
+                
+PRETURN         nop                       ; TODO: check for unreachable code
+                rts
+                
+PSTOP           nop                       ; TODO: check for unreachable code
+                rts
+
+PEND            nop                       ; TODO: check for unreachable code
                 rts
                 
 ; RUN --- execute program, from start or from given line
 RUN             lda     needprerun        ; Do we need to execute the pre-run module?
                 beq     noprerun
                 jsr     PRERUN
+                bne     rundn             ; Refuse to execute program
                 lda     #0                ; Clear pre-run flag
                 sta     needprerun
 noprerun        bra     runfromstart      ; Temporary: until parser works
@@ -1349,6 +1436,34 @@ listtab         fdb     LLET
                 fdb     LON
 listtabend
 
+; Table of routines for pre-RUN
+; Must be in same order as tokens
+pretab          fdb     LLET
+                fdb     LCONST
+                fdb     LVAR
+                fdb     PGOTOGOSUB        ; GOTO and GOSUB are identical in Pre-Run
+                fdb     PGOTOGOSUB
+                fdb     PRETURN
+                fdb     PREM
+                fdb     PPRINT
+                fdb     PEND
+                fdb     PSTOP
+                fdb     LIF
+                fdb     LTHEN
+                fdb     LFOR
+                fdb     LTO
+                fdb     LNEXT
+                fdb     LSTEP
+                fdb     LINPUT
+                fdb     LREAD
+                fdb     LDATA
+                fdb     LRESTORE
+                fdb     LPOKE
+                fdb     LDIM
+                fdb     LDEF
+                fdb     LON
+pretabend
+
 ; Table of routines for RUN
 ; Must be in same order as tokens
 runtab          fdb     LLET
@@ -1498,6 +1613,10 @@ insmsg          fcc     "Insert line: "
                 fcb     eos
  endif
 premsg          fcc     "Executing PRE-RUN"
+                fcb     cr,lf,eos
+nerrsmsg        fcc     " Pre-Run errors"
+                fcb     cr,lf,eos
+notfoundmsg     fcc     ": Target line not found"
                 fcb     cr,lf,eos
 playmsg         fcc     "Press play on tape"
                 fcb     cr,lf,eos
