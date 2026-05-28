@@ -28,30 +28,30 @@ PRINTABBR       equ     '?'               ; Abbreviation for PRINT is question-m
 
 ; Tokens for all the BASIC keywords
 ; Must be in same order as table 'rwordtab'
-TLET            equ     $80
-TCONST          equ     $81
-TVAR            equ     $82
-TGOTO           equ     $83
-TGOSUB          equ     $84
-TRETURN         equ     $85
-TREM            equ     $86
-TPRINT          equ     $87
-TEND            equ     $88
-TSTOP           equ     $89
-TIF             equ     $8a
-TTHEN           equ     $8b
-TFOR            equ     $8c
-TTO             equ     $8d
-TNEXT           equ     $8e
-TSTEP           equ     $8f
+TIF             equ     $80               ; Tokens that can begin a statement
+TON             equ     $81
+TLET            equ     $82
+TFOR            equ     $83
+TREM            equ     $84
+TEND            equ     $85
+TDIM            equ     $86
+TDEF            equ     $87
+TGOTO           equ     $88
+TNEXT           equ     $89
+TPOKE           equ     $8a
+TSTOP           equ     $8b
+TREAD           equ     $8c
+TDATA           equ     $8d
+TGOSUB          equ     $8e
+TPRINT          equ     $8f
 TINPUT          equ     $90
-TREAD           equ     $91
-TDATA           equ     $92
-TRESTORE        equ     $93
-TPOKE           equ     $94
-TDIM            equ     $95
-TDEF            equ     $96
-TON             equ     $97
+TRETURN         equ     $91
+TRESTORE        equ     $92
+TTO             equ     $93               ; Tokens below here cannot begin a statement
+TSTEP           equ     $94
+TTHEN           equ     $95
+TCONST          equ     $96
+TVAR            equ     $97
 
                 org     DATASEG
 cmdbuf          rmb     MAXLINE
@@ -66,6 +66,7 @@ lnum            fdb     0                 ; Line number
 lintext         fdb     0                 ; Pointer to text of line
 needprerun      fcb     1                 ; Do we need to execute the pre-run module?
 curln           fdb     0                 ; Line number of current line
+curptr          fdb     0                 ; Pointer of current line
 preerr          fdb     0                 ; Pre-run error counter
 
                 org     BASICTEXT         ; BASIC text storage
@@ -645,6 +646,7 @@ PRERUN          ldx     #premsg
                 ldx     progbase          ; X register starts at beginning of tokenised program in RAM
 preln           ldd     ,x++              ; Load link to next line
                 beq     predn             ; Reached end-of-program sentinel?
+                std     curptr            ; Save for use by REM, DEF, and DATA
                 ldd     ,x++              ; Load line number
                 std     curln             ; Save in case we need it for the error message
 prestmnt        lda     ,x+               ; Read byte from tokenised program (must be a token for a statement)
@@ -656,7 +658,7 @@ prestmnt        lda     ,x+               ; Read byte from tokenised program (mu
                 ldy     #pretab           ; Get address of call table
                 jsr     [a,y]             ; Call routine for this statement
 ; Poll for CTRL-C here
-                jmp     prestmnt          ; Run next statement
+                jmp     prestmnt          ; Move on to next statement
 predn           ldd     preerr            ; Did we find any errors?
                 beq     preok
                 jsr     prtdec16          ; Print error counter
@@ -665,9 +667,13 @@ predn           ldd     preerr            ; Did we find any errors?
 preok           ldd     preerr            ; Return number of errors found
                 rts
                 
-PREM            ldx     ,x                ; Load X from next word, the pointer to the next BASIC line
-                leax    4,x
-                rts
+PREM            ldd     curptr            ; Get the current line's pointer
+                std     ,x++              ; Write pointer into next word, the pointer to the next BASIC line
+premloop        lda     ,x                ; Scan along text of comment
+                beq     premdn            ; Looking for zero byte, end-of-line
+                leax    1,x
+                bra     premloop
+premdn          rts
                 
 PPRINT          lda     ,x                ; Check byte after PRINT token
                 beq     pprinteol         ; Just PRINT, print a newline
@@ -761,7 +767,8 @@ runln           ldd     ,x++              ; Read link to next line
                 lda     #']'              ; DB
                 jsr     t1ou              ; DB
  endif
-                ldd     ,x++              ; Skip line number
+                ldd     ,x++              ; Load line number
+                std     curln             ; Save for use later
  if DEBUG
                 jsr     prtdec16          ; Trace line number
                 jsr     crlf              ; DB
@@ -831,6 +838,14 @@ RSTOP           puls    d                 ; Pop and discard return address
                 jsr     t1ou
                 lda     #'P'
                 jsr     t1ou
+                jsr     space
+                lda     #'A'
+                jsr     t1ou
+                lda     #'T'
+                jsr     t1ou
+                jsr     space
+                ldd     curln
+                jsr     prtdec16
                 jsr     crlf
                 jmp     rundn
 
@@ -1410,114 +1425,111 @@ cmdtabend
                 
 ; Table of routines for LIST
 ; Must be in same order as tokens
-listtab         fdb     LLET
-                fdb     LCONST
-                fdb     LVAR
-                fdb     LGOTO
-                fdb     LGOSUB
-                fdb     LRETURN
-                fdb     LREM
-                fdb     LPRINT
-                fdb     LEND
-                fdb     LSTOP
-                fdb     LIF
-                fdb     LTHEN
+listtab         fdb     LIF
+                fdb     LON
+                fdb     LLET
                 fdb     LFOR
-                fdb     LTO
-                fdb     LNEXT
-                fdb     LSTEP
-                fdb     LINPUT
-                fdb     LREAD
-                fdb     LDATA
-                fdb     LRESTORE
-                fdb     LPOKE
+                fdb     LREM
+                fdb     LEND
                 fdb     LDIM
                 fdb     LDEF
-                fdb     LON
+                fdb     LGOTO
+                fdb     LNEXT
+                fdb     LPOKE
+                fdb     LSTOP
+                fdb     LREAD
+                fdb     LDATA
+                fdb     LGOSUB
+                fdb     LPRINT
+                fdb     LINPUT
+                fdb     LRETURN
+                fdb     LRESTORE
+                fdb     LTHEN
+                fdb     LTO
+                fdb     LSTEP
+                fdb     LCONST
+                fdb     LVAR
 listtabend
 
 ; Table of routines for pre-RUN
 ; Must be in same order as tokens
-pretab          fdb     LLET
+pretab          fdb     LIF
+                fdb     LON
+                fdb     LLET
+                fdb     LFOR
+                fdb     PREM
+                fdb     PEND
+                fdb     PREM              ; Temporary: treat DIM like REM in pre-run
+                fdb     PREM              ; Temporary: treat DEF like REM in pre-run
+                fdb     PGOTOGOSUB        ; GOTO and GOSUB are identical in Pre-Run
+                fdb     LNEXT
+                fdb     LPOKE
+                fdb     PSTOP
+                fdb     LREAD
+                fdb     PREM              ; Temporary: treat DATA like REM in pre-run
+                fdb     PGOTOGOSUB        ; GOTO and GOSUB are identical in Pre-Run
+                fdb     PPRINT
+                fdb     LINPUT
+                fdb     PRETURN
+                fdb     LRESTORE
+                fdb     LTHEN
+                fdb     LTO
+                fdb     LSTEP
                 fdb     LCONST
                 fdb     LVAR
-                fdb     PGOTOGOSUB        ; GOTO and GOSUB are identical in Pre-Run
-                fdb     PGOTOGOSUB
-                fdb     PRETURN
-                fdb     PREM
-                fdb     PPRINT
-                fdb     PEND
-                fdb     PSTOP
-                fdb     LIF
-                fdb     LTHEN
-                fdb     LFOR
-                fdb     LTO
-                fdb     LNEXT
-                fdb     LSTEP
-                fdb     LINPUT
-                fdb     LREAD
-                fdb     LDATA
-                fdb     LRESTORE
-                fdb     LPOKE
-                fdb     LDIM
-                fdb     LDEF
-                fdb     LON
 pretabend
 
 ; Table of routines for RUN
 ; Must be in same order as tokens
-runtab          fdb     LLET
+runtab          fdb     LIF
+                fdb     LON
+                fdb     LLET
+                fdb     LFOR
+                fdb     RREM
+                fdb     REND
+                fdb     RREM              ; DIM is just like a REM at run-time
+                fdb     RREM              ; DEF is just like a REM at run-time
+                fdb     RGOTO
+                fdb     LNEXT
+                fdb     LPOKE
+                fdb     RSTOP
+                fdb     LREAD
+                fdb     RREM              ; DATA is just like a REM at run-time
+                fdb     RGOSUB
+                fdb     RPRINT
+                fdb     LINPUT
+                fdb     RRETURN
+                fdb     LRESTORE
+                fdb     LTHEN
+                fdb     LTO
+                fdb     LSTEP
                 fdb     LCONST
                 fdb     LVAR
-                fdb     RGOTO
-                fdb     RGOSUB
-                fdb     RRETURN
-                fdb     RREM
-                fdb     RPRINT
-                fdb     REND
-                fdb     RSTOP
-                fdb     LIF
-                fdb     LTHEN
-                fdb     LFOR
-                fdb     LTO
-                fdb     LNEXT
-                fdb     LSTEP
-                fdb     LINPUT
-                fdb     LREAD
-                fdb     LDATA
-                fdb     LRESTORE
-                fdb     LPOKE
-                fdb     LDIM
-                fdb     LDEF
-                fdb     LON
+                
 runtabend
 
 ; Table of BASIC reserved words
 ; Must be in same order as tokens
-rwordtab        fdb     klet
-                fdb     kconst
-                fdb     kvar
-                fdb     kgoto
-                fdb     kgosub
-                fdb     kreturn
-                fdb     krem
-                fdb     kprint
-                fdb     kend
-                fdb     kstop
-                fdb     kif
-                fdb     kthen
+rwordtab        fdb     kif
+                fdb     kon
+                fdb     klet
                 fdb     kfor
-                fdb     kto
-                fdb     knext
-                fdb     kstep
-                fdb     kinput
-                fdb     kread
-                fdb     kdata
-                fdb     krestore
-                fdb     kpoke
+                fdb     krem
+                fdb     kend
                 fdb     kdim
                 fdb     kdef
-                fdb     kon
+                fdb     kgoto
+                fdb     knext
+                fdb     kpoke
+                fdb     kstop
+                fdb     kread
+                fdb     kdata
+                fdb     kgosub
+                fdb     kprint
+                fdb     kinput
+                fdb     kreturn
+                fdb     krestore
+                
 rwordtabend
 
 klist           fcc     "LIST"
@@ -1544,10 +1556,6 @@ kmem            fcc     "MEM"
                 fcb     eos
 
 klet            fcc     "LET"
-                fcb     eos
-kconst          fcc     "<const>"
-                fcb     eos
-kvar            fcc     "<var>"
                 fcb     eos
 kprint          fcc     "PRINT"
                 fcb     eos
