@@ -1,8 +1,8 @@
 ; bas09 --- BASIC for the 6809                                 2006-00-00
 ; Copyright (c) 2006 John Honniball, Froods Software Development
 
-; Will need three "methods" for each keyword:
-;  Run, List, Tokenise
+; Will need four "methods" for each keyword:
+;  Run, Pre-Run, Tokenise, List
 
 DEBUG           equ     0
 
@@ -55,6 +55,7 @@ TVAR            equ     $97
 
                 org     DATASEG
 cmdbuf          rmb     MAXLINE
+tokbuf          rmb     MAXLINE           ; Buffer for tokenised BASIC line
 decbuf          rmb     16
 progbase        fdb     0                 ; Base pointer for BASIC program
 progtop         fdb     0
@@ -62,8 +63,6 @@ scalars         fdb     var0              ; Base pointer for scalar variables
 nscalar         fdb     3
 tempw           fdb     0                 ; Temporary word location
 ptr1            fdb     0                 ; Temporary pointer
-lnum            fdb     0                 ; Line number
-lintext         fdb     0                 ; Pointer to text of line
 needprerun      fcb     1                 ; Do we need to execute the pre-run module?
 curln           fdb     0                 ; Line number of current line
 curptr          fdb     0                 ; Pointer of current line
@@ -315,20 +314,22 @@ kwfound         ;jsr     hex2ou
                 
 lnumseen        jsr     atoi16u           ; Convert line number to binary
                 lbcs    lnumovf           ; Overflow?
-                tfr     d,y               ; Stash in Y
+                std     curln             ; Save line number for later
                 jsr     skipbl            ; Skip trailing blanks
                 lda     ,x
                 bne     insline
+                ldy     curln
                 jsr     delline           ; User wants to delete a line
                 bra     cmdloop           ; Go back for another command line
-insline         jsr     tokenise
+insline         ldy     #tokbuf           ; Y points to token buffer
+                jsr     tokenise
                 cmpa    #0                ; Zero length means error
                 beq     cmdloop
-                stx     lintext           ; Remember where the line text begins
  if DEBUG
                 jsr     prtdec8           ; DB
                 jsr     space             ; DB
  endif
+                ldy     curln
                 jsr     delline           ; New line is OK, so delete old one
                 tfr     a,b
                 clra
@@ -336,8 +337,7 @@ insline         jsr     tokenise
                 std     tempw             ; Amount to add to each pointer
                 jsr     findtop           ; Find sentinel after deletion but before modifying linked list
                 stx     progtop           ; Save for later
-                sty     lnum
-                tfr     y,d               ; Get line number into D
+                ldd     curln             ; Get line number into D
  if DEBUG
                 ldx     #insmsg           ; DB
                 jsr     prtmsg            ; DB
@@ -388,9 +388,9 @@ ins3            lda     ,x
                 tfr     x,d
                 addd    tempw
                 std     ,x++              ; Store link to next line
-                ldd     lnum              ; Fetch line number
+                ldd     curln             ; Fetch line number
                 std     ,x++              ; Store it
-                ldy     lintext           ; Get ready to copy line test into place
+                ldy     #tokbuf           ; Get ready to copy line text into place
 ins4            lda     ,y+
                 sta     ,x+
                 bne     ins4              ; Copy terminating zero byte
@@ -468,19 +468,20 @@ deldone         puls    d,x,y,pc
                 
 ; TOKENISE
 ; Convert BASIC keywords to single byte tokens
-; Entry: X -> first non-blank char in source line, after line number
-; Exit: X unchanged, points to tokenised line. A = length of line
+; Entry: X -> first non-blank char in source line, after line number, Y -> buffer
+; Exit: X, Y unchanged. A = length of tokenised line or zero in case of error
 tokenise        pshs    x,y
                 clra
-tok1            ldb     ,x+
+tok1            ldb     ,x+               ; Read from ASCII line text
                 beq     tok2
                 cmpb    #PRINTABBR
                 bne     tok3
                 ldb     #TPRINT
-                stb     -1,x
-tok3            inca
+tok3            stb     ,y+               ; Write into token buffer
+                inca
                 bra     tok1
-tok2            puls    x,y,pc
+tok2            stb     ,y                ; Terminating zero byte
+                puls    x,y,pc
 
 ; EXIT
 ; Exit from BASIC and return to OS (should clean up)
